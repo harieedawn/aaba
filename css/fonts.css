@@ -1,0 +1,9 @@
+/* Font files are added by hand into /fonts (see fonts/README.txt). App works with system fonts until then. */
+@font-face{font-family:"gsans-vf";font-weight:400 700;font-style:normal;font-display:swap;
+  src:url("../fonts/gsans-vf.woff2") format("woff2"),url("../fonts/gsans-vf.woff") format("woff"),url("../fonts/gsans-vf.ttf") format("truetype")}
+@font-face{font-family:"gsans";font-weight:400;font-style:normal;font-display:swap;
+  src:url("../fonts/gsans-400.woff2") format("woff2"),url("../fonts/gsans-400.ttf") format("truetype")}
+@font-face{font-family:"gsans";font-weight:500;font-style:normal;font-display:swap;
+  src:url("../fonts/gsans-500.woff2") format("woff2"),url("../fonts/gsans-500.ttf") format("truetype")}
+@font-face{font-family:"gsans";font-weight:700;font-style:normal;font-display:swap;
+  src:url("../fonts/gsans-700.woff2") format("woff2"),url("../fonts/gsans-700.ttf") format("truetype")}
