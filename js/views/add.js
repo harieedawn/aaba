@@ -35,7 +35,7 @@ export default function add() {
     const lab = t => h('div', { class: 'add-lab' }, t);
     const stepH = (n, t) => h('div', { class: 'step-h' }, `Bước ${n}/3 · ${t}`);
     const signSeg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Loại điểm' });
-    const gBox = h('div', { class: 'fchips tiles', role: 'group', 'aria-label': 'Tổ' }),;
+    const gBox = h('div', { class: 'fchips tiles', role: 'group', 'aria-label': 'Tổ' });
     const sIn = h('input', { class: 'input', placeholder: 'Tìm học sinh', 'aria-label': 'Tìm học sinh', oninput: e => { st.sq = e.target.value; paintS(); } });
     const sChips = h('div', { class: 'pick' });
     const sSec = h('div', { class: 'add-sec' }, lab('Học sinh'), sIn, h('div', { style: { height: '8px' } }), sChips);
