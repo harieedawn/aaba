@@ -4,6 +4,13 @@ export const ROLE_LABEL = { student: 'Học sinh', recorder: 'Tổ trưởng', t
 let S = null;
 const subs = new Set();
 
+// Cổng #/chao: khách phải chọn một lần (học sinh chọn tên hoặc xem tự do). Cờ chỉ lưu trên máy.
+const GK = 'aaba.gate';
+let gate = false;
+export const gatePassed = () => { if (gate) return true; try { return localStorage.getItem(GK) === '1'; } catch { return false; } };
+export function passGate() { gate = true; try { localStorage.setItem(GK, '1'); } catch {} }
+export function clearGate() { gate = false; try { localStorage.removeItem(GK); } catch {} }
+
 export const getSession = () => S;
 export function setSession(s) { S = s; subs.forEach(f => f(S)); }
 export function onSession(f) { subs.add(f); return () => subs.delete(f); }

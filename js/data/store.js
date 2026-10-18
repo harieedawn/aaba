@@ -14,7 +14,7 @@
  *  exportConfig({withEntries})    importConfig(obj, 'merge'|'replace')      signOut()
  */
 import { BACKEND, APP_VERSION } from '../config.js';
-import { getSession, setSession, can, role } from '../session.js';
+import { getSession, setSession, can, role, clearGate } from '../session.js';
 import { bind, invalidateWeek } from './weekstore.js';
 import { weekStart, weekKey } from '../weeks.js';
 const inv = at => invalidateWeek(weekKey(weekStart(at)));
@@ -53,6 +53,13 @@ export async function pickStudent(id) {
   need(st, 'Không tìm thấy học sinh');
   try { localStorage.setItem(PK, id); } catch {}
   setSession({ ...s, studentId: id, groupId: st.groupId, titleId: st.titleId, name: st.name });
+}
+// Đăng xuất học sinh chỉ-chọn-tên: xoá tên + cờ cổng trên máy (không ghi Firestore).
+export async function leaveGuest() {
+  const s = getSession();
+  need(s && s.role === 'guest');
+  lsDel(PK); lsDel('aaba.seen'); clearGate();
+  setSession({ uid: s.uid, role: 'guest', name: 'Khách', studentId: null, groupId: null, titleId: null });
 }
 // ONE shared adapter listener per collection, ref-counted.: stops when the last subscriber leaves.
 const hub = new Map();

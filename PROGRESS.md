@@ -72,6 +72,8 @@
 - Keep: Tổ, Chức vụ, Hoàn tác, Ghi tiếp, Quản lý, Công cụ dev, Nội quy/Học tập/Phong trào, seed rule names, "Dán luật bảo mật" (Firestore rules).
 - Helper texts: Đợt (admin), Điểm khởi đầu (settings), Chờ xác nhận (Cần xác nhận page). Code ids/routes/fields unchanged.
 ## Design v2 log
+- Gate #/chao DONE: js/views/chao.js (Chào bạn: Tôi là học sinh lớp 11A3 -> tổ -> tên via store.pickStudent = localStorage aaba.me, no Firestore write | Tôi chỉ muốn xem (khách) | Tôi có mã đăng nhập -> #/join). Router: no session OR guest without name and without gate flag -> #/chao; student-without-studentId still -> #/join. Session null (openView off) -> notice only, no names, no subscriptions. Tôi: guest with name has Đổi tên + Đăng xuất (store.leaveGuest clears aaba.me, aaba.seen, gate flag -> #/chao).
+- Decision: new localStorage flag `aaba.gate` (+ in-memory fallback) = guest already passed the gate; needed because an openView guest session exists automatically. Existing guests see #/chao once. js/views/admin/cycle.js left untouched (not part of this task).
 - Step 1 DONE: tokens/base/layout/components CSS, light default theme (Sáng/Tối/Tự động in session.js + Me segmented control), manifest/theme-color. Components markup (step 2+) pending.
 - Step 2 DONE: icons (+flag), logo "a" tile, entryRow = activity row (category icon tile, signed amount, clock+chờ xác nhận), home.js rewritten (greeting, lead sentence, week segments, hero card, rows without bars, side column cards). Nav restyled via CSS only.
 - Step 3 DONE: feed (Hôm nay/Hôm qua/dd/MM), add (Bước n/3, Trừ|Cộng toggle default Trừ, 56px tiles, exact submit text), group (solid hero + bars), rules, review, me (profile card), join (welcome card).

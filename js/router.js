@@ -1,7 +1,7 @@
 // Hash router. Views: default export (ctx) => {el, destroy?}. Routes without a view yet render a "Sắp có" stub.
 import { h, put } from './ui/dom.js';
 import { emptyState } from './ui/components.js';
-import { can, onSession, getSession } from './session.js';
+import { can, onSession, getSession, gatePassed } from './session.js';
 import { reduced } from './ui/anim.js';
 import { logError } from './errors.js';
 
@@ -16,6 +16,7 @@ const ROUTES = [
   [/^\/duyet$/, { guard: 'approve', load: () => import('./views/review.js') }],
   [/^\/quanly(?:\/([^/]+))?$/, { guard: 'manage', load: () => import('./views/admin/index.js') }],
   [/^\/dev(?:\/([^/]+))?$/, { guard: 'dev', load: () => import('./views/dev/index.js') }],
+  [/^\/chao$/, { load: () => import('./views/chao.js') }],
   [/^\/join(?:\/([^/]+))?$/, { load: () => import('./views/join.js') }],
 ];
 export const navigate = path => { location.hash = '#' + path; };
@@ -38,7 +39,10 @@ export function startRouter(outlet, { onRoute } = {}) {
     const t = ++token, r = parse();
     if (!r) return navigate('/');
     const me = getSession();
-    if ((!me || (me.role === 'student' && !me.studentId)) && !r.path.startsWith('/join')) return navigate('/join');
+    if (!r.path.startsWith('/join') && !r.path.startsWith('/chao')) {
+      if (!me || (me.role === 'guest' && !me.studentId && !gatePassed())) return navigate('/chao');
+      if (me.role === 'student' && !me.studentId) return navigate('/join');
+    }
     let view;
     try {
       if (r.def.guard && !can(r.def.guard)) view = stub(r.def, true);

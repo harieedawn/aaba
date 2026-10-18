@@ -74,7 +74,9 @@ export default function me() {
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => setPreview(null) }, 'Thoát xem thử'))) : null,
       h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg()),
       installHint(),
-      guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.pickStudent(null), { btn: ev.currentTarget }) }, 'Đổi tên'), h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'),
+      guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.pickStudent(null), { btn: ev.currentTarget }) }, 'Đổi tên'),
+        h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.leaveGuest(), { btn: ev.currentTarget }) }, 'Đăng xuất'),
+        h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'),
         h('p', { class: 'muted', style: { textAlign: 'center', fontSize: '13px' } }, `aaba ${APP_VERSION}`))
       : h('section', { class: 'card' },
         h('button', { class: 'btn btn-ghost', style: { width: '100%' }, onclick: ev => act(() => store.signOut(), { btn: ev.currentTarget }) }, 'Đăng xuất'),
