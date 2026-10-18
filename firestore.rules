@@ -18,18 +18,21 @@ service cloud.firestore {
     function lowRole(r) { return r in ['recorder', 'teacher', 'student']; }
     function docOf(col, id) { return get(/databases/$(database)/documents/$(col)/$(id)).data; }
     function optNull(m, k) { return m.get(k, null); }
+    // Open viewing: anonymous visitors (no member doc) may READ class data while config/main.openView == true.
+    function cfgRef() { return /databases/$(database)/documents/config/main; }
+    function openView() { return signedIn() && exists(cfgRef()) && get(cfgRef()).data.get('openView', false) == true; }
     function strOrNull(v) { return v == null || v is string; }
 
     // ---------- config & class data: everyone in the class reads, admin/dev write ----------
     match /config/{id} {
-      allow read: if isMember();
+      allow read: if isMember() || openView();
       allow write: if isPriv() && id == 'main';
     }
-    match /groups/{id}   { allow read: if isMember(); allow write: if isPriv(); }
-    match /students/{id} { allow read: if isMember(); allow write: if isPriv(); }
-    match /rules/{id}    { allow read: if isMember(); allow write: if isPriv(); }
-    match /cycles/{id}   { allow read: if isMember(); allow write: if isPriv(); }
-    match /duty/{id}     { allow read: if isMember(); allow write: if isPriv(); }
+    match /groups/{id}   { allow read: if isMember() || openView(); allow write: if isPriv(); }
+    match /students/{id} { allow read: if isMember() || openView(); allow write: if isPriv(); }
+    match /rules/{id}    { allow read: if isMember() || openView(); allow write: if isPriv(); }
+    match /cycles/{id}   { allow read: if isMember() || openView(); allow write: if isPriv(); }
+    match /duty/{id}     { allow read: if isMember() || openView(); allow write: if isPriv(); }
 
     // ---------- members ----------
     // Reads are limited: member docs carry the invite code (= a join secret). Self: always. Dev: all.
@@ -87,7 +90,7 @@ service cloud.firestore {
 
     // ---------- entries ----------
     match /entries/{id} {
-      allow read: if isMember();
+      allow read: if isMember() || openView();
       // dev: unrestricted (backup import / resets). Everyone else: validated below.
       allow create: if isDev() || validEntry(request.resource.data);
       allow update: if isMember() && (validVoid(resource.data, request.resource.data) || validApprove(resource.data, request.resource.data));
