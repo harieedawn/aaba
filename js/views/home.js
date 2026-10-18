@@ -110,7 +110,8 @@ export default function home() {
     if (!COLS.every(k => S[k] !== undefined)) return;
     if (S.weekStart === undefined) return;
     const ss = getSession(), first = (ss?.name || '').trim().split(/\s+/).pop();
-    hello.textContent = first ? `Chào ${first}` : 'Chào bạn';
+    const full = (ss?.name || '').trim().replace(/\s+/g, ' ');
+    hello.textContent = ss?.role === 'teacher' && full ? `Chào ${/\sThị\s/i.test(full) ? 'cô' : 'thầy'} ${full}` : first ? `Chào ${first}` : 'Chào bạn';
     const now = Date.now(), dl = daysLeft(now), day = Math.min(6, Math.floor((now - S.weekStart) / DAY));
     wkT.textContent = `Tuần ${wkLabel(S.weekStart)} · ${dl ? `còn ${dl} ngày` : 'Hôm nay chốt tuần'}`;
     put(wk, ...Array.from({ length: 7 }, (_, i) => h('i', { class: i <= day ? 'on' : '' })));
