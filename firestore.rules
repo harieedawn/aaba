@@ -89,20 +89,21 @@ service cloud.firestore {
     }
 
     // ---------- entries ----------
+    // delete: dev always; teacher/admin only a VOIDED entry ("Xoá hẳn").
     match /entries/{id} {
       allow read: if isMember() || openView();
       // dev: unrestricted (backup import / resets). Everyone else: validated below.
       allow create: if isDev() || validEntry(request.resource.data);
       allow update: if isMember() && (validVoid(resource.data, request.resource.data) || validApprove(resource.data, request.resource.data));
-      allow delete: if isDev();
+      allow delete: if isDev() || (isStaff() && resource.data.status == 'void');
     }
     function validEntry(d) {
       let m = me();
       let rule = docOf('rules', d.ruleId);
       return m.role in ['recorder', 'teacher', 'admin']
-        && d.keys().hasOnly(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy'])
+        && d.keys().hasOnly(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy', 'addedAt', 'replaces'])
         && d.keys().hasAll(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy'])
-        && d.by == uid() && d.at == request.time && d.byName == m.name
+        && d.by == uid() && entryTime(d, m) && d.byName == m.name
         && d.cycleId == docOf('config', 'main').currentCycleId
         && d.groupId is string && strOrNull(d.studentId)
         && d.unit is number && d.qty is int && d.qty >= 1 && d.points == d.unit * d.qty
@@ -114,6 +115,12 @@ service cloud.firestore {
         && d.note is string && d.note.size() <= 500
         && d.voidReason == '' && d.voidBy == ''
         && (m.role == 'recorder' ? recorderOk(d, m) : d.status == 'ok');
+    }
+    // NORMAL: at == server time, no addedAt/replaces. ADMIN-BACKDATED: past `at` (< 200 days), addedAt == server time, optional replaces (string).
+    function entryTime(d, m) {
+      return (d.at == request.time && !('addedAt' in d) && !('replaces' in d))
+        || (m.role == 'admin' && d.at < request.time && d.at > request.time - duration.value(200, 'd')
+            && 'addedAt' in d && d.addedAt == request.time && (!('replaces' in d) || d.replaces is string));
     }
     // recorder: own tổ only; student (if any) must belong to that tổ; points<0 -> ok, points>0 -> pending
     function recorderOk(d, m) {
