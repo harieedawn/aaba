@@ -21,7 +21,7 @@ export default function group({ params }) {
     const members = S.students.filter(s => s.groupId === id)
       .map(s => ({ s, pts: personalPoints(s.id, S.entries) }))
       .sort((a, b) => b.pts - a.pts || a.s.name.localeCompare(b.s.name, 'vi'));
-    const recent = [...mine].sort((a, b) => b.at - a.at);
+    const recent = mine.filter(e => e.status !== 'void').sort((a, b) => b.at - a.at);
     const open = e => entrySheet(e, { group: g, student: sm.get(e.studentId) });
     const out = [
       pageHeader(g.name, { back: '#/', sub: 'Điểm tuần này' }),

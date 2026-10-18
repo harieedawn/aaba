@@ -9,6 +9,7 @@ const lab = t => { const l = dayLabel(t); return l.startsWith('Hôm') ? l : fmtD
 import { emptyState, pageHeader, skeletonCards, entryRow, entrySheet } from '../ui/components.js';
 import { stagger } from '../ui/anim.js';
 import { purgeAllBtn } from './purge.js';
+const canPurge = () => can('purge', { entry: { status: 'void' } });
 
 const STATUS = [['', 'Tất cả'], ['ok', 'Đã xác nhận'], ['pending', 'Chờ xác nhận']];
 
@@ -50,10 +51,10 @@ export default function feed() {
     if (!ready() || entries === null) return;
     const readOnly = st.off > 0 && !can('backdate');
     const gm = new Map(M.groups.map(g => [g.id, g])), sm = new Map(M.students.map(s => [s.id, s]));
-    const rows = entries.filter(e => (!st.g || e.groupId === st.g) && (!st.cat || e.cat === st.cat) && (!st.status || e.status === st.status) && (st.showVoid || e.status !== 'void'))
+    const rows = entries.filter(e => (!st.g || e.groupId === st.g) && (!st.cat || e.cat === st.cat) && (!st.status || e.status === st.status) && (e.status !== 'void' || (st.showVoid && canPurge())))
       .sort((a, b) => b.at - a.at);
     const nv = entries.filter(e => e.status === 'void').length;
-    voidBtn.textContent = `Hiện đã thu hồi (${nv})`; voidBtn.setAttribute('aria-pressed', String(st.showVoid)); voidBtn.hidden = !nv && !st.showVoid;
+    voidBtn.textContent = `Hiện đã thu hồi (${nv})`; voidBtn.setAttribute('aria-pressed', String(st.showVoid)); voidBtn.hidden = !canPurge() || (!nv && !st.showVoid);
     const out = [];
     if (st.showVoid) { const b = purgeAllBtn(entries.filter(e => e.status === 'void')); if (b) out.push(b); }
     if (readOnly) out.push(h('div', { class: 'note' }, 'Tuần này đã tổng kết, chỉ xem.'));

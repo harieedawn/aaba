@@ -4,6 +4,7 @@ import { fmtPts, fmtNum, fmtDate } from '../../format.js';
 import { WD_SHORT, dowOf } from '../../weeks.js';
 import { chip, entrySheet, dot } from '../../ui/components.js';
 import { studentNet } from '../../scoring.js';
+import { can } from '../../session.js';
 
 const sign = n => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 // ctx: {gm, sm, readOnly}
@@ -32,7 +33,7 @@ export function groupDetail(r, entries, students, ctx) {
       h('span', { class: 'muted' }, `${live.length} dòng${pend ? `, ${pend} chờ` : ''}`), h('b', { class: 'tk-tot' }, fmtNum(r.total))),
     h('div', { class: 'tk-body' },
       live.length ? live.map(e => entryLine(e, ctx)) : h('p', { class: 'muted' }, 'Không có điểm nào trong tuần.'),
-      voided.length > 0 && h('details', { class: 'tk-void' }, h('summary', { class: 'muted' }, `Đã thu hồi (${voided.length})`),
+      voided.length > 0 && can('purge', { entry: { status: 'void' } }) && h('details', { class: 'tk-void' }, h('summary', { class: 'muted' }, `Đã thu hồi (${voided.length})`),
         voided.map(e => h('div', { class: 'tk-vr' }, entryLine(e, ctx), h('div', { class: 'muted tk-s tk-why' }, `Lý do: ${e.voidReason || '—'}`))),
         ctx.voidExtra?.(voided)),
       h('div', { class: 'tk-h' }, 'Thành viên'),

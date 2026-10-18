@@ -10,7 +10,7 @@ const top = a => a.reduce((m, e) => Math.max(m, e.at || 0), 0);
 
 function calc() {
   const s = getSession();
-  list = s?.studentId ? all.filter(e => e.studentId === s.studentId && e.by !== s.uid).sort((a, b) => b.at - a.at) : [];
+  list = s?.studentId ? all.filter(e => e.studentId === s.studentId && e.by !== s.uid && e.status !== 'void').sort((a, b) => b.at - a.at) : [];
   const v = rd();
   if (v == null) { if (s?.studentId && all.length) wr(top(list)); } else seen = v;
   subs.forEach(f => f());
