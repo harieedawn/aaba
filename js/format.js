@@ -32,12 +32,3 @@ export function relTime(t, now = Date.now()) {
   if (startOfDay(t) === startOfDay(now)) return `${Math.floor(m / 60)} giờ trước`;
   return `${fmtDate(t)} ${fmtTime(t)}`;
 }
-export function cycleInfo(cycle, weeks = 4, now = Date.now()) {
-  if (!cycle) return null;
-  const end = cycle.end || cycle.start + weeks * 7 * DAY;
-  return {
-    n: cycle.n, weeks,
-    week: Math.min(weeks, Math.max(1, Math.floor((now - cycle.start) / (7 * DAY)) + 1)),
-    daysLeft: Math.max(0, Math.ceil((end - now) / DAY)),
-  };
-}

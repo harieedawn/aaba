@@ -35,6 +35,8 @@ export function can(action, ctx = {}) {
     case 'approve': return staff && (!ctx.entry || ctx.entry.by !== S.uid);
     case 'edit': case 'close': return r === 'admin' || r === 'dev';
     case 'manage': return staff;
+    case 'backdate': return r === 'admin' || r === 'dev';
+    case 'purge': return staff && ctx.entry?.status === 'void';
     case 'createInvite':
       if (r === 'dev') return true;
       return r === 'admin' && (ctx.role == null || ['recorder', 'teacher', 'student'].includes(ctx.role));

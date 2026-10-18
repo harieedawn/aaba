@@ -20,7 +20,15 @@ export const lastSeen = () => seen;
 export const unseen = () => list.filter(e => e.at > seen).length;
 export function markSeen() { const t = Math.max(seen, top(list)); if (t !== seen) { wr(t); subs.forEach(f => f()); } }
 export function onNotif(f) { subs.add(f); return () => subs.delete(f); }
+// Realtime on my own entries only (studentId==me, any week); resubscribes when the picked/claimed student changes.
+let unsub = null, sid = null;
+function resub() {
+  const id = getSession()?.studentId || null;
+  if (id === sid && (unsub || !id)) return;
+  unsub?.(); unsub = null; sid = id; all = [];
+  if (id) unsub = store.studentEntries(id, es => { all = es; calc(); });
+}
 export function startNotify() {
-  store.on('entries', es => { all = es; calc(); });
-  onSession(calc);
+  resub(); calc();
+  onSession(() => { resub(); calc(); });
 }

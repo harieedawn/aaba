@@ -10,7 +10,8 @@ import { unseen, onNotif, startNotify } from './notify.js';
 // path, label, icon, extra class, wide (rail/sidebar only), visibility
 const NAV = [
   { path: '/', label: 'Xếp hạng', icon: 'rank' },
-  { path: '/lichsu', label: 'Nhật ký', icon: 'history' },
+  { path: '/tongket', label: 'Tổng kết', icon: 'recap' },
+  { path: '/lichsu', label: 'Nhật ký', icon: 'history', wide: true },
   { path: '/ghi', label: 'Ghi điểm', icon: 'plus', cls: 'ghi', show: () => can('record') },
   { path: '/duyet', label: 'Xác nhận', icon: 'check', wide: true, badge: true, show: () => can('approve') },
   { path: '/quanly', label: 'Quản lý', icon: 'settings', wide: true, show: () => can('manage') },
@@ -59,7 +60,9 @@ async function boot() {
   startNotify();
   onNotif(() => document.querySelectorAll('[data-ndot]').forEach(d => { d.hidden = !unseen(); }));
   onSession(() => buildNav(list));
-  store.on('entries', es => { pending = es.filter(e => e.status === 'pending').length; paintBadge(); });
+  let stopPend = null;
+  const pendSub = () => { stopPend?.(); stopPend = null; pending = 0; paintBadge(); if (can('approve')) stopPend = store.pendingEntries(es => { pending = es.length; paintBadge(); }); };
+  pendSub(); onSession(pendSub);
   startRouter($('#view'), { onRoute: p => { curPath = p; markActive(); } });
 }
 boot();
