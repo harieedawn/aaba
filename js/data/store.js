@@ -2,16 +2,16 @@
  * Methods (15):
  *  init()                         -> loads adapter, sets session, returns it
  *  on(col, cb, opts)              -> unsubscribe. cols: config (object), groups, students, rules, entries,
- *                                    cycles, duty, members, invites (arrays of {id,...}). entries = current vòng
+ *                                    cycles, duty, members, invites (arrays of {id,...}). entries = current đợt
  *                                    unless opts.all or opts.cycleId.
  *  addEntry({groupId,studentId,ruleId,qty,note}) -> entry   (snapshots rule, sets status per role)
  *  voidEntry(id, reason)          approveEntry(id)
  *  saveDoc(col, id|null, data)    -> id (merge)        deleteDoc(col, id)
- *  closeCycle()                   -> stores summary, opens next vòng
+ *  closeCycle()                   -> stores summary, opens next đợt
  *  createInvite(inv) -> code      revokeInvite(code)   joinWithCode(code)   claimStudent(studentId)
  *  exportConfig({withEntries})    importConfig(obj, 'merge'|'replace')      signOut()
  */
-import { BACKEND } from '../config.js';
+import { BACKEND, APP_VERSION } from '../config.js';
 import { getSession, setSession, can, role } from '../session.js';
 import { cycleSummary } from '../scoring.js';
 let A;
@@ -34,7 +34,7 @@ export async function addEntry(e) {
   const s = getSession();
   need(can('record', { groupId: e.groupId }));
   const [rule, cfg] = await Promise.all([A.get('rules', e.ruleId), A.get('config', 'main')]);
-  need(rule && rule.active !== false, 'Mục không tồn tại');
+  need(rule && rule.active !== false, 'Nội dung không tồn tại');
   if (e.studentId && role() === 'recorder') {
     const st = await A.get('students', e.studentId);
     need(st && st.groupId === s.groupId);
@@ -89,7 +89,8 @@ export async function createInvite(inv) {
   return code;
 }
 export async function revokeInvite(code) {
-  need(can('createInvite'));
+  const inv = await A.get('invites', code);
+  need(inv && can('createInvite', { role: inv.role }));
   await A.set('invites', code, { active: false }, { merge: true });
   for (const m of await A.list('members')) if (m.inviteId === code) await A.remove('members', m.id);
 }
@@ -97,10 +98,10 @@ export async function joinWithCode(code) {
   const inv = await A.get('invites', String(code).trim());
   need(inv && inv.active, 'Mã không hợp lệ hoặc đã bị thu hồi');
   const uid = await A.uid();
-  const m = { role: inv.role, inviteId: String(code).trim(), studentId: inv.studentId, groupId: inv.groupId,
-    titleId: inv.titleId, name: inv.label, at: Date.now() };
+  const m = { role: inv.role, inviteId: String(code).trim(), studentId: inv.studentId ?? null, groupId: inv.groupId ?? null,
+    titleId: inv.titleId ?? null, name: inv.label || '', at: Date.now() };
   await A.set('members', uid, m);
-  A.remember?.(uid);
+  A.remember?.(uid, m.role);
   setSession({ uid, ...m });
   return m;
 }
@@ -113,18 +114,31 @@ export async function claimStudent(studentId) {
   await A.set('members', s.uid, patch, { merge: true });
   setSession({ ...s, ...patch });
 }
+const COLS = ['groups', 'students', 'rules', 'cycles', 'duty', 'entries'];
+const byId = a => Object.fromEntries(a.map(({ id, ...d }) => [id, d]));
+// Config export: never invite codes (labels+roles only), never entries unless withEntries (full backup).
 export async function exportConfig({ withEntries = false } = {}) {
   need(can('dev'));
-  const cols = ['groups', 'students', 'rules', 'cycles', 'duty', ...(withEntries ? ['entries'] : [])], out = { v: 1, config: await A.get('config', 'main') };
-  for (const c of cols) out[c] = Object.fromEntries((await A.list(c)).map(({ id, ...d }) => [id, d]));
+  const config = await A.get('config', 'main'), out = { v: 1, app: 'aaba', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), config, titles: config.titles || [] };
+  for (const c of COLS.filter(c => c !== 'entries' || withEntries)) out[c] = byId(await A.list(c));
+  out.invites = (await A.list('invites')).map(({ label, role, active, groupId, studentId, titleId }) => ({ label, role, active, groupId, studentId, titleId }));
+  const per = {};
+  Object.values(out.students).forEach(s => { if (s.active !== false) per[s.groupId] = (per[s.groupId] || 0) + 1; });
+  out.memberCounts = per;
+  out.counts = { groups: Object.keys(out.groups).length, students: Object.keys(out.students).length, rules: Object.keys(out.rules).length, invites: out.invites.length };
   return out;
 }
+// mode 'replace' clears every collection present in obj first (and replaces config). Invites/members are never imported.
 export async function importConfig(obj, mode = 'merge') {
   need(can('dev'));
-  for (const c of Object.keys(obj).filter(k => k !== 'v' && k !== 'config')) {
+  need(obj && obj.v === 1, 'File không đúng định dạng aaba');
+  for (const c of COLS.filter(k => obj[k] && typeof obj[k] === 'object')) {
     if (mode === 'replace') for (const d of await A.list(c)) await A.remove(c, d.id);
-    for (const [id, d] of Object.entries(obj[c])) await A.set(c, id, d);
+    for (const [id, d] of Object.entries(obj[c])) await A.set(c, id, d, { raw: true });
   }
-  if (obj.config) await A.set('config', 'main', obj.config, { merge: mode !== 'replace' });
+  if (obj.config) await A.set('config', 'main', { ...obj.config, ...((obj.config.titles || obj.titles) && { titles: obj.config.titles || obj.titles }) }, { merge: mode !== 'replace' });
+  const cfg = await A.get('config', 'main');
+  if (cfg?.currentCycleId && !(await A.get('cycles', cfg.currentCycleId)))
+    await A.set('cycles', cfg.currentCycleId, { n: parseInt(cfg.currentCycleId.slice(1)) || 1, start: Date.now(), end: null, closed: false, summary: [] });
 }
 export const signOut = async () => { await A.signOut(); setSession(null); };

@@ -76,7 +76,7 @@ const E = [
 ];
 
 export function buildDemo(now = Date.now()) {
-  const start = startOfWeek(now) - 7 * DAY; // current vòng began last Monday -> tuần 2/4
+  const start = startOfWeek(now) - 7 * DAY; // current đợt began last Monday -> tuần 2/4
   const rules = seedRules();
   const groups = {}, students = {};
   COLORS.forEach((color, i) => {
@@ -113,7 +113,7 @@ export function buildDemo(now = Date.now()) {
     duty: { [weekKey(now)]: { groupId: 'g2' }, [weekKey(now - 7 * DAY)]: { groupId: 'g1' } },
     members: {},
     invites: {
-      QRCHUNG11A3DEMO00001: { role: 'student', label: 'QR chung', studentId: null, groupId: null, titleId: null, active: true, createdBy: 'u_admin', at: now },
+      QRCHUNG11A3DEMO00001: { role: 'student', label: 'Mã chung của lớp', studentId: null, groupId: null, titleId: null, active: true, createdBy: 'u_admin', at: now },
       TOTRUONG1DEMOCODE001: { role: 'recorder', label: 'Tổ trưởng Tổ 1', studentId: 's_1_1', groupId: 'g1', titleId: 't_totruong', active: true, createdBy: 'u_admin', at: now },
       ADMINDEMOCODE0000001: { role: 'admin', label: 'Ban cán sự', studentId: 's_1_3', groupId: 'g1', titleId: 't_lt', active: true, createdBy: 'u_dev', at: now },
       DEVDEMOCODE000000001: { role: 'dev', label: 'Quản trị', studentId: null, groupId: null, titleId: null, active: true, createdBy: 'u_dev', at: now },
