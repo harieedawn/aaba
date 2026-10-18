@@ -8,11 +8,11 @@ import { startRouter } from './router.js';
 // path, label, icon, extra class, wide (rail/sidebar only), visibility
 const NAV = [
   { path: '/', label: 'Xếp hạng', icon: 'rank' },
-  { path: '/lichsu', label: 'Lịch sử', icon: 'history' },
-  { path: '/ghi', label: 'Ghi', icon: 'plus', cls: 'ghi', show: () => can('record') },
-  { path: '/duyet', label: 'Duyệt', icon: 'check', wide: true, badge: true, show: () => can('approve') },
+  { path: '/lichsu', label: 'Nhật ký', icon: 'history' },
+  { path: '/ghi', label: 'Ghi điểm', icon: 'plus', cls: 'ghi', show: () => can('record') },
+  { path: '/duyet', label: 'Xác nhận', icon: 'check', wide: true, badge: true, show: () => can('approve') },
   { path: '/quanly', label: 'Quản lý', icon: 'settings', wide: true, show: () => can('manage') },
-  { path: '/luat', label: 'Luật', icon: 'book' },
+  { path: '/luat', label: 'Thể lệ', icon: 'book' },
   { path: '/toi', label: 'Tôi', icon: 'user' },
 ];
 let pending = 0, curPath = '/';

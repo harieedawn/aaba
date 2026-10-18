@@ -12,8 +12,8 @@ const ROUTES = [
   [/^\/toi$/, { load: () => import('./views/me.js') }],
   [/^\/ghi$/, { guard: 'record', load: () => import('./views/add.js') }],
   [/^\/duyet$/, { guard: 'approve', load: () => import('./views/review.js') }],
-  [/^\/quanly(?:\/([^/]+))?$/, { stub: 'Quản lý', icon: 'settings', guard: 'manage' }],
-  [/^\/dev(?:\/([^/]+))?$/, { stub: 'Dev tools', icon: 'shield', guard: 'dev' }],
+  [/^\/quanly(?:\/([^/]+))?$/, { guard: 'manage', load: () => import('./views/admin/index.js') }],
+  [/^\/dev(?:\/([^/]+))?$/, { guard: 'dev', load: () => import('./views/dev/index.js') }],
   [/^\/join(?:\/([^/]+))?$/, { load: () => import('./views/join.js') }],
 ];
 export const navigate = path => { location.hash = '#' + path; };
@@ -36,7 +36,7 @@ export function startRouter(outlet, { onRoute } = {}) {
     const t = ++token, r = parse();
     if (!r) return navigate('/');
     const me = getSession();
-    if (me?.role === 'student' && !me.studentId && !r.path.startsWith('/join')) return navigate('/join');
+    if ((!me || (me.role === 'student' && !me.studentId)) && !r.path.startsWith('/join')) return navigate('/join');
     let view;
     try {
       if (r.def.guard && !can(r.def.guard)) view = stub(r.def, true);

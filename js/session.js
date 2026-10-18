@@ -42,20 +42,25 @@ export function can(action, ctx = {}) {
   }
 }
 
-// ---- theme (light/dark, manual choice stored in localStorage) ----
+// Roles the current user may put on a new invite (SPEC §7: admin never admin/dev).
+export const inviteRoles = () => ['dev', 'admin', 'teacher', 'recorder', 'student'].filter(x => can('createInvite', { role: x }));
+
+// ---- theme: pref = light (default) | dark | auto, stored in localStorage ----
 const TK = 'aaba.theme';
-const COLORS = { light: '#F5F6F8', dark: '#0F1115' };
-const stored = () => { try { return localStorage.getItem(TK); } catch { return null; } };
+const COLORS = { light: '#FBF8F2', dark: '#13151A' };
+const stored = () => { try { const v = localStorage.getItem(TK); return v === 'dark' || v === 'auto' ? v : 'light'; } catch { return 'light'; } };
+const mq = matchMedia('(prefers-color-scheme: dark)');
+const resolve = p => (p === 'auto' ? (mq.matches ? 'dark' : 'light') : p);
 function apply(t) {
   document.documentElement.dataset.theme = t;
-  document.querySelectorAll('meta[name=theme-color]').forEach(m => m.setAttribute('content', COLORS[t]));
+  document.querySelectorAll('meta[name=theme-color]').forEach(m => { m.removeAttribute('media'); m.setAttribute('content', COLORS[t]); });
 }
 export const getTheme = () => document.documentElement.dataset.theme || 'light';
-export function setTheme(t) { try { localStorage.setItem(TK, t); } catch {} apply(t); themeSubs.forEach(f => f(t)); }
+export const getThemePref = stored;
+export function setTheme(p) { try { localStorage.setItem(TK, p); } catch {} apply(resolve(p)); themeSubs.forEach(f => f(p)); }
 const themeSubs = new Set();
 export function onTheme(f) { themeSubs.add(f); return () => themeSubs.delete(f); }
 export function initTheme() {
-  const mq = matchMedia('(prefers-color-scheme: dark)');
-  apply(stored() || (mq.matches ? 'dark' : 'light'));
-  mq.addEventListener('change', e => { if (!stored()) apply(e.matches ? 'dark' : 'light'); });
+  apply(resolve(stored()));
+  mq.addEventListener('change', () => { if (stored() === 'auto') { apply(resolve('auto')); themeSubs.forEach(f => f('auto')); } });
 }
