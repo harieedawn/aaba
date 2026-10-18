@@ -8,7 +8,7 @@ const SECTIONS = [
   ['luat', 'Thể lệ', 'book', () => import('./rules.js')],
   ['chucvu', 'Chức vụ', 'shield', () => import('./titles.js')],
   ['truc', 'Lịch trực nhật', 'clock', () => import('./duty.js')],
-  ['moi', 'Mã đăng nhập & QR', 'qr', () => import('./invites.js')],
+  ['moi', 'Mã đăng nhập', 'user', () => import('./invites.js')],
   ['vong', 'Tổng kết đợt', 'check', () => import('./cycle.js')],
   ['caidat', 'Cài đặt lớp', 'settings', () => import('./settings.js')],
 ];

@@ -1,19 +1,16 @@
-// Admin: invites (create/list/revoke; QR + copy link + visible 20-char code). Admin cannot make admin/dev invites.
+// Admin: invites (create/list/revoke; big 5-5-5-5 code + copy raw code). Admin cannot make admin/dev invites.
 import { h } from '../../ui/dom.js';
 import * as store from '../../data/store.js';
 import { live, chip } from '../../ui/components.js';
 import { toast } from '../../ui/toast.js';
 import { can, role, ROLE_LABEL, inviteRoles } from '../../session.js';
-import { renderQR, inviteLink } from '../../lib/qr.js';
 import { formSheet, confirmSheet, field, textInput, selectInput, arow, iconBtn, copyText } from '../../ui/form.js';
 import { openSheet } from '../../ui/sheet.js';
 
 export function showInvite(code, label) {
-  const link = inviteLink(code);
-  openSheet({ title: label || 'Mã mời', content: h('div', { class: 'form' }, renderQR(link, { code }),
-    h('div', { class: 'mono' }, link), h('div', { class: 'code-big', 'aria-label': 'Mã mời' }, code),
-    h('div', { class: 'row-btns' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => copyText(link, 'Đã sao chép liên kết') }, 'Sao chép liên kết'),
-      h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => copyText(code, 'Đã sao chép mã') }, 'Sao chép mã'))) });
+  openSheet({ title: label || 'Mã đăng nhập', content: h('div', { class: 'form' },
+    h('div', { class: 'code-big', 'aria-label': 'Mã đăng nhập' }, code.match(/.{1,5}/g).join(' ')),
+    h('div', { class: 'row-btns' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => copyText(code, 'Đã sao chép mã') }, 'Sao chép mã'))) });
 }
 function createSheet(S) {
   const roles = inviteRoles(), gm = new Map(S.groups.map(g => [g.id, g.name])), tm = new Map((S.config.titles || []).map(t => [t.id, t]));
@@ -36,7 +33,7 @@ function createSheet(S) {
     } });
 }
 const revoke = i => confirmSheet({ title: `Thu hồi “${i.label}”?`, label: 'Thu hồi',
-  text: 'Mã sẽ ngừng dùng được và những người đã vào bằng mã này phải quét mã mới.', onConfirm: async () => { await store.revokeInvite(i.id); toast('Đã thu hồi'); } });
+  text: 'Mã sẽ ngừng dùng được và những người đã vào bằng mã này phải nhập mã khác.', onConfirm: async () => { await store.revokeInvite(i.id); toast('Đã thu hồi'); } });
 
 export default function invitesView() {
   const body = h('div', { class: 'stack' });
@@ -44,7 +41,7 @@ export default function invitesView() {
     const gm = new Map(S.groups.map(g => [g.id, g.name]));
     const vis = S.invites.filter(i => role() === 'dev' || i.role !== 'dev').sort((a, b) => (b.active - a.active) || b.at - a.at);
     const rotate = () => confirmSheet({ title: 'Tạo mã chung của lớp mới?', label: 'Tạo & thu hồi cũ',
-      text: 'Tạo mã chung mới cho học sinh và thu hồi các mã chung cũ. Người đã vào bằng mã cũ phải quét lại.',
+      text: 'Tạo mã chung mới cho học sinh và thu hồi các mã chung cũ. Người đã vào bằng mã cũ phải nhập mã mới.',
       onConfirm: async () => {
         const olds = S.invites.filter(i => i.active && i.role === 'student' && !i.studentId);
         const code = await store.createInvite({ role: 'student', label: 'Mã chung của lớp' });
@@ -56,7 +53,7 @@ export default function invitesView() {
         can('createInvite', { role: 'student' }) && h('button', { class: 'btn btn-ghost', type: 'button', onclick: rotate }, 'Tạo mã chung của lớp mới')),
       h('section', { class: 'card' }, vis.length ? vis.map(i => arow({ name: i.label || 'Mã mời', off: !i.active,
         sub: h('span', { class: 'inl' }, chip(ROLE_LABEL[i.role]), gm.get(i.groupId), !i.active && 'đã thu hồi'),
-        actions: [i.active && iconBtn('qr', 'Xem mã QR', () => showInvite(i.id, i.label)),
+        actions: [i.active && iconBtn('copy', 'Xem mã', () => showInvite(i.id, i.label)),
           i.active && can('createInvite', { role: i.role }) && iconBtn('trash', 'Thu hồi', () => revoke(i))] }))
         : h('p', { class: 'muted' }, 'Chưa có mã mời nào.')),
     ];
