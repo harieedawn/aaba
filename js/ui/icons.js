@@ -22,6 +22,8 @@ const P = {
   edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
   bell: 'M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 0 0 4 0',
+  present: 'M3 4h18v12H3zM8 20h8M12 16v4',
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
 };
 export function icon(name, size = 22, cls = '') {

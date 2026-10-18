@@ -89,3 +89,10 @@
 - entrySheet and admin screens still use chip/pointsChip (inherit tokens; not redesigned). `.btn-accent` and `.seg` are new components.
 ## Checks (step 4)
 - Ban-list grep clean; node --check all js OK; scoring selftest OK; no fixed widths >440px, flex children min-width:0, fchips scroll in own container → no horizontal scroll at 360px by CSS reading. Not browser-tested.
+## Trình chiếu (projection mode) DONE
+- Route `#/chieu/:weekKey` (past or current week; invalid/future key -> #/tongket). Entry: button "Trình chiếu" in Tổng kết · Tuần (all roles, hidden in Tháng/3 tháng). Exit: Esc / "Thoát" -> `#/tongket/tuan/:weekKey`.
+- Files: js/views/chieu/{build.js (PURE), build.selftest.mjs, index.js (stage/nav/load), slides.js, finale.js, input.js (keys/swipe/idle/wake lock)}, css/chieu.css (linked in index.html). Router + icons (present, expand) + tongket/index.js patched with small str_replace.
+- Data: store.on config/groups/students + ONE store.weekEntries(start,{fresh: retry || current week}); no new queries/writes, rules untouched.
+- Overlay is appended to document.body (not #view, to avoid transformed ancestors); body.chieu-on hides nav/banner. Unit `--s` = min(1vw,1.7778vh) = 1% of the 16:9 box; body text 2.2·s ≈ 28px at 1280.
+- Decisions: no auto-step (reveal on press/tap only); tap/click anywhere on the stage = next; swipe ≥60px = prev/next. Finale: last step shows rank-1 tổ (all tied tổ = "đồng hạng nhất") as hero; >4 non-first rows use 2 columns with category values only + legend in the header; category subtotals ≈24px (below the 28px body min, secondary text). Pending shown only as "n điểm đang chờ xác nhận"; voided never. Title slide has no yellow accent; pencil-yellow #FFD23F only as the finale underline. H masks names as "·" (indicator bottom-left).
+- Checks: build.selftest.mjs OK (empty, one tổ empty, ties, void/pending, 4 and 8 groups, Nổi bật); node --check clean; ban-list grep clean. Not browser-tested.

@@ -20,11 +20,13 @@ export default function tongket({ params: [pm, pk] }) {
   const M = {}, S = { pend: 0 };
   let sub = null, tok = 0, gone = false;
   const banner = h('div'), nav = h('div', { class: 'wknav' }), seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Kiểu tổng kết' }), body = h('div', { class: 'stack' }, ...skeletonCards(3));
+  const presLink = h('a', { class: 'btn btn-ghost tk-pres', href: '#/chieu/' + key }, icon('present', 20), 'Trình chiếu'), presRow = h('div', { class: 'tk-pres-row' }, presLink);
   const reload = h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => load(true) }, 'Tải lại');
-  const el = h('div', { class: 'view narrow tk' }, pageHeader('Tổng kết'), banner, seg, nav, h('p', { class: 'muted tk-note' }, 'Tuần tính vào tháng của ngày thứ 6'), body, h('div', { class: 'tk-reload' }, reload));
+  const el = h('div', { class: 'view narrow tk' }, pageHeader('Tổng kết'), banner, seg, presRow, nav, h('p', { class: 'muted tk-note' }, 'Tuần tính vào tháng của ngày thứ 6'), body, h('div', { class: 'tk-reload' }, reload));
   const ready = () => ['config', 'groups', 'students'].every(k => M[k] !== undefined);
 
   function head() {
+    presLink.href = '#/chieu/' + key; presRow.hidden = mode !== 'tuan';
     const conv = m => (m === 'tuan' ? W.weekKey(Math.min(cur, W.weeksOfMonth(mode === 'tuan' ? W.monthOfWeek(W.keyToStart(key)).key : key).slice(-1)[0] ?? cur)) : mode === 'tuan' ? W.monthOfWeek(W.keyToStart(key)).key : key);
     put(seg, ...MODES.map(([m, l]) => h('button', { type: 'button', 'aria-pressed': String(m === mode), onclick: () => m !== mode && go(m, conv(m)) }, l)));
     const w = mode === 'tuan', s = w && W.keyToStart(key);

@@ -9,6 +9,7 @@ const ROUTES = [
   [/^\/$/, { load: () => import('./views/home.js') }],
   [/^\/to\/([^/]+)$/, { load: () => import('./views/group.js') }],
   [/^\/tongket(?:\/([^/]+)\/([^/]+))?$/, { load: () => import('./views/tongket/index.js') }],
+  [/^\/chieu\/([^/]+)$/, { load: () => import('./views/chieu/index.js') }],
   [/^\/lichsu$/, { load: () => import('./views/feed.js') }],
   [/^\/luat$/, { load: () => import('./views/rules.js') }],
   [/^\/toi$/, { load: () => import('./views/me.js') }],
