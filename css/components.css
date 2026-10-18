@@ -31,7 +31,7 @@
 .lb-hero .float-delta{color:var(--go)}
 .track{height:10px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
 .fill{height:100%;width:100%;background:var(--gc);border-radius:var(--r-pill);transform-origin:left center;transform:scaleX(0)}
-.weekbar{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-1);margin-top:var(--sp-4)}
+.weekbar{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--sp-1);margin-top:var(--sp-4)}
 .weekbar i{height:8px;border-radius:var(--r-pill);background:var(--border)}.weekbar i.on{background:var(--ink)}
 .wk-t{font-size:var(--fs-13);color:var(--text-2);margin-top:var(--sp-2)}
 .hello{font-size:var(--fs-30);font-weight:700;letter-spacing:-.01em;line-height:1.2}
