@@ -8,9 +8,10 @@ export function logError(src, e) {
   if (log.length > 20) log.shift();
 }
 function soft(src, e) {
-  if (/ResizeObserver/.test(String(e?.message || e))) return;
+  const m = String(e?.message || e);
+  if (/ResizeObserver|Transition was (skipped|aborted)|signal is aborted/i.test(m) || e?.name === 'AbortError') return;
   logError(src, e);
-  if (Date.now() - lastToast > 4000) { lastToast = Date.now(); try { toast('Có lỗi, thử lại'); } catch {} }
+  if (Date.now() - lastToast > 4000) { lastToast = Date.now(); try { toast('Có lỗi, thử lại' + (e?.code ? ` (${e.code})` : '')); } catch {} }
 }
 export function installErrors() {
   addEventListener('error', ev => soft('error', ev.error || ev.message));

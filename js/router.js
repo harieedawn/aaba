@@ -64,7 +64,8 @@ export function startRouter(outlet, { onRoute } = {}) {
       scrollTo(0, 0);
       onRoute?.(r.path);
     };
-    vt ? document.startViewTransition(swap) : swap();
+    if (vt) { const tr = document.startViewTransition(swap); for (const k of ['ready', 'finished', 'updateCallbackDone']) tr[k]?.catch(() => {}); }
+    else swap();
     first = false;
   }
   addEventListener('hashchange', render);

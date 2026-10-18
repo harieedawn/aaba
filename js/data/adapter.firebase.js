@@ -74,7 +74,7 @@ function watchSelf(uid) {
 // watch(col, cb, opts) : 'config' delivers one object; entries need opts.range [a,b) | status | studentId (never all).
 export function watch(col, cb, opts = {}) {
   const sub = { dead: false, stops: [] };
-  const fail = e => { console.warn('aaba watch', col, e.code || e); sub.stops.splice(0).forEach(f => f()); sub.dead = e.code === 'permission-denied'; if (sub.dead) opts.onDenied?.(); };
+  const fail = e => { console.warn('aaba watch', col, e.code || e); sub.stops.splice(0).forEach(f => f()); sub.dead = e.code === 'permission-denied'; if (sub.dead) opts.onDenied?.(); else if (subs.has(sub)) setTimeout(() => { if (subs.has(sub) && !sub.stops.length) sub.start(); }, 4000); };
   const arr = s => { if (!s.metadata.fromCache) docsIn += s.docChanges().length; cb(s.docs.map(docOf)); };
   sub.start = () => {
     sub.dead = false;

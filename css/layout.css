@@ -1,6 +1,6 @@
 /* phone <=599 (default) | tablet 600-1023 rail | desktop >=1024 sidebar */
-.main{min-height:100dvh;padding:env(safe-area-inset-top) var(--sp-5) calc(96px + env(safe-area-inset-bottom))}
-.view{max-width:1100px;margin:0 auto;padding:var(--sp-4) 0 var(--sp-8)}
+.main{min-width:0;max-width:100%;min-height:100dvh;padding:env(safe-area-inset-top) var(--sp-5) calc(96px + env(safe-area-inset-bottom))}
+.view{min-width:0;max-width:1100px;margin:0 auto;padding:var(--sp-4) 0 var(--sp-8)}
 .hdr{display:flex;align-items:center;gap:var(--sp-3);min-height:56px;margin-bottom:var(--sp-4)}
 .hdr-main{flex:1;min-width:0}
 .hdr-sub{font-size:var(--fs-13);margin-top:var(--sp-1)}

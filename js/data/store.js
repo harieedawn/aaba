@@ -67,7 +67,7 @@ export function on(col, cb, opts = {}) {
     g = { cbs: new Set(), den: new Set(), has: false, last: null, stop: null };
     hub.set(key, g);
     const me = g;
-    me.stop = A.watch(col, d => { me.has = true; me.last = d; [...me.cbs].forEach(f => f(share(col, d))); }, { ...o, onDenied: () => [...me.den].forEach(f => f()) });
+    me.stop = A.watch(col, d => { me.has = true; me.last = d; [...me.cbs].forEach(f => f(share(col, d))); }, { ...o, onDenied: () => { if (hub.get(key) === me) hub.delete(key); [...me.den].forEach(f => f()); } });
   }
   g.cbs.add(cb);
   if (opts.onDenied) g.den.add(opts.onDenied);
