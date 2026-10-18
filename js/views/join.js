@@ -6,6 +6,7 @@ import { logo, dot, themeToggle } from '../ui/components.js';
 import { getSession } from '../session.js';
 import { navigate } from '../router.js';
 import { toast } from '../ui/toast.js';
+import { act, errMsg } from '../ui/act.js';
 
 const ERR = {
   empty: 'Hãy nhập mã gồm 20 ký tự.',
@@ -32,7 +33,7 @@ export default function join({ params }) {
         try { const m = await store.joinWithCode(k); return afterJoin(m); } catch (e) { last = e; }
       }
       btn.disabled = false; errEl.hidden = false;
-      errEl.textContent = navigator.onLine ? ERR.bad : ERR.net;
+      errEl.textContent = ['resource-exhausted', 'unavailable'].includes(last?.code) ? errMsg(last) : navigator.onLine ? ERR.bad : ERR.net;
     };
     btn.onclick = () => go();
     input.addEventListener('keydown', e => e.key === 'Enter' && go());
@@ -68,16 +69,12 @@ export default function join({ params }) {
     const search = h('input', { class: 'input', placeholder: 'Tìm tên của bạn', 'aria-label': 'Tìm tên', oninput: e => { q = e.target.value.toLowerCase(); paint(); } });
     function paint() {
       put(list, ...groups.flatMap(g => {
-        const ss = students.filter(s => s.groupId === g.id && s.active !== false && s.name.toLowerCase().includes(q));
+        const ss = students.filter(s => s.groupId === g.id && s.name.toLowerCase().includes(q));
         return ss.length ? [h('div', { class: 'pick-g inl' }, dot(g.color), g.name), h('div', { class: 'pick' }, ss.map(s => h('button', {
           class: 'fchip pressable', 'aria-pressed': String(sel === s.id), onclick: () => { sel = s.id; confirm.disabled = false; paint(); } }, s.name)))] : [];
       }));
     }
-    confirm.onclick = async () => {
-      confirm.disabled = true;
-      try { await store.claimStudent(sel); toast(`Chào ${getSession().name}`); navigate('/'); }
-      catch (e) { confirm.disabled = false; toast('Không chọn được tên. Thử lại nhé.'); }
-    };
+    confirm.onclick = () => act(async () => { await store.claimStudent(sel); toast(`Chào ${getSession().name}`); navigate('/'); }, { btn: confirm });
     put(root, h('div', { class: 'sec-h' }, logo(), themeToggle()), h('h1', null, 'Bạn là ai?'),
       h('p', { class: 'muted', style: { margin: '8px 0 16px' } }, 'Chọn tên của bạn trong danh sách. Chỉ chọn được một lần, hãy chọn cẩn thận.'), search, list, confirm);
     const done = () => groups.length && students.length && paint();

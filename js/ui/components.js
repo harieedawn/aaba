@@ -7,6 +7,8 @@ import { getTheme, setTheme, onTheme, can, getSession } from '../session.js';
 import * as store from '../data/store.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
+import { errMsg } from './act.js';
+import { logError } from '../errors.js';
 import { unseen, onNotif } from '../notify.js';
 
 export const logo = () => h('span', { class: 'logo' }, h('span', { class: 'logo-sq', 'aria-hidden': 'true' }, 'a'), h('span', { class: 'logo-t' }, 'aaba'));
@@ -47,7 +49,7 @@ export function bell() {
 }
 
 export function entryRow(e, { group, student, onOpen, catId } = {}) {
-  const who = e.studentId ? student?.name || 'Học sinh' : 'Cả tổ';
+  const who = e.studentId ? student?.name || 'Học sinh đã xoá' : 'Cả tổ';
   const cat = catId || e.catId || e.categoryId || e.cat;
   const amt = h('span', { class: 'amt ' + (e.points > 0 ? 'pos' : e.points < 0 ? 'neg' : '') }, fmtPts(e.points));
   const row = h('div', { class: 'entry' + (e.status === 'void' ? ' is-void' : '') + (onOpen ? ' pressable' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
@@ -80,7 +82,7 @@ export function live(el, cols, render, opts = {}) {
   const paint = () => {
     if (!cols.every(c => S[c] !== undefined)) return;
     try { put(el, ...[].concat(render(S, first))); }
-    catch (err) { put(el, emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: err.message, action: { label: 'Tải lại', onClick: () => location.reload() } })); }
+    catch (err) { logError('render', err); put(el, emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: 'Không hiển thị được mục này. Hãy thử tải lại.', action: { label: 'Tải lại', onClick: () => location.reload() } })); }
     first = false;
   };
   const subs = cols.map(c => store.on(c, v => { S[c] = v; paint(); }, opts[c]));
@@ -89,7 +91,7 @@ export function live(el, cols, render, opts = {}) {
 
 // Shared "reason required" confirm sheet (void / reject).
 export function reasonSheet({ title, text, label, onSubmit }) {
-  const ta = h('textarea', { class: 'input textarea', rows: '3', placeholder: 'Lý do thu hồi (bắt buộc)', 'aria-label': 'Lý do thu hồi' });
+  const ta = h('textarea', { class: 'input textarea', rows: '3', placeholder: 'Lý do thu hồi (bắt buộc)', maxlength: '500', 'aria-label': 'Lý do thu hồi' });
   const err = h('div', { class: 'form-err', role: 'alert', hidden: true }, 'Cần nhập lý do.');
   const ok = h('button', { class: 'btn btn-danger', type: 'button' }, label);
   const sh = openSheet({ title, content: h('div', { class: 'form' }, text && h('p', { class: 'muted' }, text), ta, err,
@@ -98,7 +100,7 @@ export function reasonSheet({ title, text, label, onSubmit }) {
     const v = ta.value.trim();
     if (!v) { err.textContent = 'Cần nhập lý do.'; err.hidden = false; ta.focus(); return; }
     ok.disabled = true;
-    try { await onSubmit(v); sh.close(); } catch (e) { ok.disabled = false; err.textContent = e.message || 'Có lỗi xảy ra'; err.hidden = false; }
+    try { await onSubmit(v); sh.close(); } catch (e) { ok.disabled = false; logError('form', e); err.textContent = errMsg(e); err.hidden = false; }
   };
   setTimeout(() => ta.focus(), 50);
   return sh;
@@ -111,7 +113,7 @@ export function entrySheet(e, { group, student, readOnly } = {}) {
   const sh = openSheet({ title: 'Chi tiết điểm', content: h('div', { class: 'detail' },
     h('div', { class: 'detail-top' }, h('div', { class: 'detail-name' }, e.ruleName), pointsChip(e.points)),
     kv('Tổ', h('span', { class: 'inl' }, dot(group?.color), group?.name || '')),
-    kv('Học sinh', e.studentId ? student?.name || '' : 'Cả tổ'),
+    kv('Học sinh', e.studentId ? student?.name || 'Học sinh đã xoá' : 'Cả tổ'),
     e.qty > 1 && kv('Số lượng', `${e.qty} × ${fmtPts(e.unit)}`),
     kv('Thời gian', `${fmtDate(e.at)} ${fmtTime(e.at)}`),
     kv('Người ghi', e.byName), kv('Trạng thái', status),

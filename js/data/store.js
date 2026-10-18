@@ -2,7 +2,7 @@
  * Methods (15):
  *  init()                         -> loads adapter, sets session, returns it
  *  on(col, cb, opts)              -> unsubscribe. cols: config (object), groups, students, rules, entries,
- *                                    cycles, duty, members, invites (arrays of {id,...}). entries = current đợt
+ *                                    cycles, members, invites (arrays of {id,...}). entries = current đợt
  *                                    unless opts.all or opts.cycleId.
  *  addEntry({groupId,studentId,ruleId,qty,note}) -> entry   (snapshots rule, sets status per role)
  *  voidEntry(id, reason)          approveEntry(id)
@@ -17,7 +17,7 @@ import { cycleSummary } from '../scoring.js';
 let A;
 const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPHA[b % ALPHA.length]).join('');
-const need = (ok, msg = 'Không có quyền') => { if (!ok) throw new Error(msg); };
+const need = (ok, msg = 'Bạn không có quyền làm việc này') => { if (!ok) throw new Error(msg); };
 
 export async function init() {
   A = BACKEND === 'firebase' ? await import('./adapter.firebase.js') : await import('./adapter.local.js');
@@ -32,7 +32,7 @@ const lsGet = k => { try { return localStorage.getItem(k); } catch { return null
 const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
 async function guestInit(s) {
   const kick = () => { stop?.(); setSession(null); };
-  const stop = A.watch('config', c => { if (c.openView !== true) kick(); }, { onDenied: kick });
+  const stop = on('config', c => { if (c.openView !== true) kick(); }, { onDenied: kick });
   const id = lsGet(PK);
   if (!id) return s;
   const st = await A.get('students', id).catch(() => null);
@@ -49,10 +49,29 @@ export async function pickStudent(id) {
   try { localStorage.setItem(PK, id); } catch {}
   setSession({ ...s, studentId: id, groupId: st.groupId, titleId: st.titleId, name: st.name });
 }
+// ONE shared adapter listener per (collection, cycle), ref-counted: stops when the last subscriber leaves.
+const hub = new Map();
+const share = (col, d) => (Array.isArray(d) ? d.slice()
+  : col === 'config' && d ? { className: '', school: '', cycleWeeks: 4, currentCycleId: null, ...d, categories: d.categories || [], titles: d.titles || [] } : d);
 export function on(col, cb, opts = {}) {
-  const o = { ...opts };
+  const o = {};
   if (col === 'entries') o.cycle = opts.cycleId || (opts.all ? null : 'current');
-  return A.watch(col, cb, o);
+  const key = col + '|' + (o.cycle || '');
+  let g = hub.get(key);
+  if (!g) {
+    g = { cbs: new Set(), den: new Set(), has: false, last: null, stop: null };
+    hub.set(key, g);
+    const me = g;
+    me.stop = A.watch(col, d => { me.has = true; me.last = d; [...me.cbs].forEach(f => f(share(col, d))); }, { ...o, onDenied: () => [...me.den].forEach(f => f()) });
+  }
+  g.cbs.add(cb);
+  if (opts.onDenied) g.den.add(opts.onDenied);
+  if (g.has) { const d = g.last; queueMicrotask(() => g.cbs.has(cb) && cb(share(col, d))); }
+  return () => {
+    if (!g.cbs.delete(cb)) return;
+    if (opts.onDenied) g.den.delete(opts.onDenied);
+    if (!g.cbs.size) { g.stop?.(); if (hub.get(key) === g) hub.delete(key); }
+  };
 }
 export async function addEntry(e) {
   const s = getSession();
@@ -65,10 +84,10 @@ export async function addEntry(e) {
   }
   const studentId = rule.scope === 'group' ? null : e.studentId || null;
   need(rule.scope !== 'student' || studentId, 'Cần chọn học sinh');
-  const qty = rule.perUnit ? Math.max(1, e.qty | 0) : 1, points = rule.points * qty;
+  const qty = rule.perUnit ? Math.min(99, Math.max(1, e.qty | 0)) : 1, points = rule.points * qty;
   const doc = {
     cycleId: cfg.currentCycleId, groupId: e.groupId, studentId, ruleId: e.ruleId,
-    ruleName: rule.name, cat: rule.cat, unit: rule.points, qty, points, note: e.note || '',
+    ruleName: rule.name, cat: rule.cat, unit: rule.points, qty, points, note: String(e.note || '').trim().slice(0, 500),
     by: s.uid, byName: s.role === 'dev' ? 'Quản trị' : s.name, at: Date.now(),
     status: role() === 'recorder' && points > 0 ? 'pending' : 'ok', voidReason: '', voidBy: '',
   };
@@ -80,7 +99,8 @@ export async function voidEntry(id, reason) {
   const entry = await A.get('entries', id);
   need(entry && can('void', { entry }));
   need(reason && reason.trim(), 'Cần nhập lý do');
-  await A.set('entries', id, { status: 'void', voidReason: reason.trim(), voidBy: getSession().uid }, { merge: true });
+  reason = reason.trim().slice(0, 500);
+  await A.set('entries', id, { status: 'void', voidReason: reason, voidBy: getSession().uid }, { merge: true });
 }
 export async function approveEntry(id) {
   const entry = await A.get('entries', id);
@@ -89,6 +109,9 @@ export async function approveEntry(id) {
 }
 export async function saveDoc(col, id, data) {
   need(can('edit'));
+  data = { ...data };
+  if (typeof data.name === 'string') data.name = data.name.trim().slice(0, 80);
+  if (typeof data.note === 'string') data.note = data.note.trim().slice(0, 500);
   id = col === 'config' ? 'main' : id || col[0] + '_' + Date.now().toString(36) + rand(3);
   await A.set(col, id, data, { merge: true });
   return id;
@@ -138,7 +161,7 @@ export async function claimStudent(studentId) {
   await A.set('members', s.uid, patch, { merge: true });
   setSession({ ...s, ...patch });
 }
-const COLS = ['groups', 'students', 'rules', 'cycles', 'duty', 'entries'];
+const COLS = ['groups', 'students', 'rules', 'cycles', 'entries'];
 const byId = a => Object.fromEntries(a.map(({ id, ...d }) => [id, d]));
 // Config export: never invite codes (labels+roles only), never entries unless withEntries (full backup).
 export async function exportConfig({ withEntries = false } = {}) {
@@ -147,7 +170,7 @@ export async function exportConfig({ withEntries = false } = {}) {
   for (const c of COLS.filter(c => c !== 'entries' || withEntries)) out[c] = byId(await A.list(c));
   out.invites = (await A.list('invites')).map(({ label, role, active, groupId, studentId, titleId }) => ({ label, role, active, groupId, studentId, titleId }));
   const per = {};
-  Object.values(out.students).forEach(s => { if (s.active !== false) per[s.groupId] = (per[s.groupId] || 0) + 1; });
+  Object.values(out.students).forEach(s => { per[s.groupId] = (per[s.groupId] || 0) + 1; });
   out.memberCounts = per;
   out.counts = { groups: Object.keys(out.groups).length, students: Object.keys(out.students).length, rules: Object.keys(out.rules).length, invites: out.invites.length };
   return out;
@@ -156,6 +179,7 @@ export async function exportConfig({ withEntries = false } = {}) {
 export async function importConfig(obj, mode = 'merge') {
   need(can('dev'));
   need(obj && obj.v === 1, 'File không đúng định dạng aaba');
+  delete obj.duty; // tolerated: old exports may still carry a 'duty' key; silently ignored
   for (const c of COLS.filter(k => obj[k] && typeof obj[k] === 'object')) {
     if (mode === 'replace') for (const d of await A.list(c)) await A.remove(c, d.id);
     for (const [id, d] of Object.entries(obj[c])) await A.set(c, id, d, { raw: true });

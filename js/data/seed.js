@@ -18,7 +18,7 @@ export const TITLES = [
   { id: 't_topho', name: 'Tổ phó', role: 'student' },
 ];
 
-// [id, cat, scope(S|G|B), points, name, note, flags] flags: u=perUnit d=duty h=hot a=assumed
+// [id, cat, scope(S|G|B), points, name, note, flags] flags: u=perUnit h=hot a=assumed
 const R = [
   ['nq01', 'noiquy', 'S', -20, 'Không phù hiệu, bảng tên', 'Buổi sáng', ''],
   ['nq02', 'noiquy', 'S', -20, 'Nghỉ học có phép, đi trễ', '', ''],
@@ -42,12 +42,12 @@ const R = [
   ['ht05', 'hoctap', 'S', -20, 'Phát biểu linh tinh trong giờ học', '', ''],
   ['ht06', 'hoctap', 'S', -10, 'Không soạn bài & làm bài tập theo phân công', '', ''],
   ['ht07', 'hoctap', 'S', -20, 'Thiếu nghiêm túc trong giờ học (không tập trung nghe giáo viên giảng bài, nói chuyện riêng trong giờ học, ngủ gục…)', '', ''],
-  ['pt01', 'phongtrao', 'G', -50, 'Tổ trực nhật không hoàn thành', 'Trực nhật lại', 'd'],
+  ['pt01', 'phongtrao', 'G', -50, 'Tổ trực nhật không hoàn thành', 'Trực nhật lại', ''],
   ['pt02', 'phongtrao', 'S', -50, 'Không thực hiện lao động theo phân công', '', ''],
   ['pt03', 'phongtrao', 'S', -10, 'Không tập thể dục giữa giờ', '', ''],
   ['pt04', 'phongtrao', 'B', 10, 'Được nhà trường tuyên dương trước cờ', '', ''],
-  ['pt05', 'phongtrao', 'G', -10, 'Tổ trực không tham gia xây dựng bài đủ 100%', '', 'ud'],
-  ['pt06', 'phongtrao', 'G', 50, 'Tổ trực tham gia xây dựng bài đủ 100%', '', 'd'],
+  ['pt05', 'phongtrao', 'G', -10, 'Tổ trực không tham gia xây dựng bài đủ 100%', '', 'u'],
+  ['pt06', 'phongtrao', 'G', 50, 'Tổ trực tham gia xây dựng bài đủ 100%', '', ''],
   ['pt07', 'phongtrao', 'B', 100, 'Thành viên đạt giải phong trào cấp trường', '', 'u'],
   ['pt08', 'phongtrao', 'B', 500, 'Thành viên đạt giải phong trào cấp tỉnh', '', 'u'],
 ];
@@ -55,7 +55,7 @@ const SCOPE = { S: 'student', G: 'group', B: 'both' };
 export function seedRules() {
   const out = {};
   R.forEach(([id, cat, sc, points, name, note, f], i) => {
-    out['r_' + id] = { cat, name, points, scope: SCOPE[sc], perUnit: f.includes('u'), duty: f.includes('d'),
+    out['r_' + id] = { cat, name, points, scope: SCOPE[sc], perUnit: f.includes('u'),
       hot: f.includes('h'), note, order: i + 1, active: true, assumed: f.includes('a') };
   });
   return out;
@@ -110,7 +110,6 @@ export function buildDemo(now = Date.now()) {
       c1: { n: 1, start: start - 28 * DAY, end: start, closed: true, summary: sum },
       c2: { n: 2, start, end: null, closed: false, summary: [] },
     },
-    duty: { [weekKey(now)]: { groupId: 'g2' }, [weekKey(now - 7 * DAY)]: { groupId: 'g1' } },
     members: {},
     invites: {
       MACCHUNG11A3DEMO0001: { role: 'student', label: 'Mã chung của lớp', studentId: null, groupId: null, titleId: null, active: true, createdBy: 'u_admin', at: now },

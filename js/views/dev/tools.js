@@ -5,6 +5,8 @@ import { toast } from '../../ui/toast.js';
 import { BACKEND, APP_VERSION } from '../../config.js';
 import { role, setPreview, ROLE_LABEL, getSession } from '../../session.js';
 import { live } from '../../ui/components.js';
+import { errorLog } from '../../errors.js';
+import { copyText } from '../../ui/form.js';
 import { confirmSheet } from '../../ui/form.js';
 import { CATEGORIES, TITLES } from '../../data/seed.js';
 
@@ -17,6 +19,11 @@ function preview() {
     h('div', { class: 'pick' }, ['student', 'recorder', 'teacher', 'admin', 'dev'].map(r => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(cur === r),
       onclick: () => { setPreview(r === real ? null : r); toast(r === real ? 'Đã quay về quyền thật' : `Đang xem như ${ROLE_LABEL[r]}`); } }, r === 'dev' ? 'Quản trị (thật)' : ROLE_LABEL[r]))));
 }
+function errors() {
+  const log = errorLog(), text = () => log.map(e => `${e.t} [${e.src}] ${e.code} ${e.msg} ${e.stack}`).join('\n');
+  return card('Lỗi gần đây', log.length ? h('div', { class: 'stack' }, h('pre', { class: 'mono', style: { whiteSpace: 'pre-wrap', maxHeight: '240px', overflow: 'auto' } }, text()),
+    h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => copyText(text(), 'Đã sao chép lỗi') }, 'Sao chép')) : h('p', { class: 'muted' }, 'Chưa có lỗi nào.'));
+}
 function diag() {
   const sw = h('span', { class: 'mono' }, '…');
   const reg = navigator.serviceWorker?.getRegistration?.();
@@ -26,11 +33,11 @@ function diag() {
 }
 function wipe(S) {
   const go = () => confirmSheet({ title: 'Xóa dữ liệu lớp?', label: 'Xóa dữ liệu', requireText: 'XOA',
-    text: 'Xóa tổ, học sinh, thể lệ, điểm, lịch trực và đợt; giữ tên lớp và mã mời. Hãy xuất cấu hình trước. Không hoàn tác được.',
+    text: 'Xóa tổ, học sinh, thể lệ, điểm và đợt; giữ tên lớp và mã mời. Hãy xuất cấu hình trước. Không hoàn tác được.',
     onConfirm: async () => {
       const c = S.config;
       await store.importConfig({ v: 1, config: { className: c.className || '', school: c.school || '', cycleWeeks: c.cycleWeeks || 4, currentCycleId: 'c1', categories: CATEGORIES, titles: TITLES },
-        groups: {}, students: {}, rules: {}, entries: {}, duty: {}, cycles: { c1: { n: 1, start: Date.now(), end: null, closed: false, summary: [] } } }, 'replace');
+        groups: {}, students: {}, rules: {}, entries: {}, cycles: { c1: { n: 1, start: Date.now(), end: null, closed: false, summary: [] } } }, 'replace');
       toast('Đã xóa dữ liệu lớp'); location.hash = '#/dev';
     } });
   return card('Xóa dữ liệu lớp', h('p', { class: 'muted', style: { marginBottom: '12px' } }, 'Đưa lớp về trạng thái trống để thiết lập lại hoặc nhập file.'),
@@ -46,6 +53,6 @@ export default function tools() {
   const body = h('div', { class: 'stack' });
   const stop = live(body, ['config'], S => [preview(),
     card('Kiểm tra font', h('p', { class: 'font-check' }, 'Tiếng Việt: Đặng Thị Ngọc Hưng ắằẳẵặ ơư ĐƯỢC'), h('p', { class: 'muted' }, 'Nếu chữ bị vỡ hoặc lệch dấu, kiểm tra các file trong thư mục fonts.')),
-    diag(), wipe(S), reset()]);
+    diag(), errors(), wipe(S), reset()]);
   return { el: body, destroy: stop };
 }

@@ -4,6 +4,7 @@ import { logo, emptyState } from './ui/components.js';
 import * as store from './data/store.js';
 import { can, onSession, initTheme } from './session.js';
 import { startRouter } from './router.js';
+import { installErrors } from './errors.js';
 import { unseen, onNotif, startNotify } from './notify.js';
 
 // path, label, icon, extra class, wide (rail/sidebar only), visibility
@@ -39,6 +40,7 @@ function paintBadge() {
 }
 
 async function boot() {
+  installErrors();
   initTheme();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(() => {});
   const root = $('#app');

@@ -5,6 +5,7 @@ import { dot } from '../ui/components.js';
 import * as store from '../data/store.js';
 import { toast } from '../ui/toast.js';
 import { fmtPts, relTime } from '../format.js';
+import { act } from '../ui/act.js';
 
 export function namePicker(groups, students) {
   let q = '';
@@ -12,10 +13,10 @@ export function namePicker(groups, students) {
   const paint = () => {
     const kids = [];
     for (const g of [...groups].sort((a, b) => a.order - b.order)) {
-      const ss = students.filter(s => s.groupId === g.id && s.active !== false && s.name.toLowerCase().includes(q));
+      const ss = students.filter(s => s.groupId === g.id && s.name.toLowerCase().includes(q));
       if (!ss.length) continue;
       kids.push(h('div', { class: 'pick-g inl' }, dot(g.color), g.name), h('div', { class: 'pick' }, ss.map(s => h('button', {
-        class: 'fchip pressable', type: 'button', onclick: () => store.pickStudent(s.id).catch(() => toast('Không chọn được tên. Thử lại nhé.')) }, s.name))));
+        class: 'fchip pressable', type: 'button', onclick: () => act(() => store.pickStudent(s.id)) }, s.name))));
     }
     put(list, kids);
   };

@@ -1,14 +1,14 @@
-// Home: header, leaderboard (FLIP / count-up / bar grow / stagger), duty chip, "Hoạt động gần đây".
+// Home: header, leaderboard (FLIP / count-up / bar grow / stagger), "Hoạt động gần đây".
 import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { rankGroups, deltaSince } from '../scoring.js';
-import { fmtNum, fmtPts, cycleInfo, startOfDay, weekKey } from '../format.js';
+import { fmtNum, fmtPts, cycleInfo, startOfDay } from '../format.js';
 import { bell, themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
 import { countUp, flip, stagger, floatDelta } from '../ui/anim.js';
 import { getSession, can, role } from '../session.js';
 
 const memo = new Map(); let memoOrder = ''; // last shown values: remount animates from them
-const COLS = ['config', 'groups', 'students', 'entries', 'cycles', 'duty'];
+const COLS = ['config', 'groups', 'students', 'entries', 'cycles'];
 
 function makeCard(cats, id) {
   const c = { v: 0, d: 0 };
@@ -47,7 +47,7 @@ export default function home() {
     c.el.href = '#/to/' + g.id;
     c.el.setAttribute('aria-label', `Hạng ${r.rank}, ${g.name}, ${fmtNum(r.total)} điểm`);
     c.rank.textContent = r.rank;
-    c.tile.textContent = (g.name.match(/\d+/) || [g.name[0]])[0];
+    c.tile.textContent = ((g.name || '?').match(/\d+/) || [(g.name || '?')[0]])[0];
     c.name.textContent = g.name;
     c.mine.hidden = g.id !== mine;
     c.total.className = top ? 'hero-score' : 'lb-total';
@@ -93,12 +93,9 @@ export default function home() {
       .map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId) }));
     put(latest, ...(rows.length ? rows : [emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm mới sẽ hiện ở đây.' })]));
     if (!latestDone && rows.length) { stagger(latest.children); latestDone = true; }
-    const dg = gm.get(S.duty.find(d => d.id === weekKey(Date.now()))?.groupId);
     const pend = S.entries.filter(e => e.status === 'pending');
     const myPend = pend.filter(e => e.groupId === getSession()?.groupId).length;
     const cards = [];
-    if (dg) cards.push(h('section', { class: 'card duty-card g-' + dg.color }, h('span', { class: 'tile' }, (dg.name.match(/\d+/) || [dg.name[0]])[0]),
-      h('div', null, h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Tổ trực tuần này'), h('b', null, dg.name))));
     if (can('approve')) cards.push(h('section', { class: 'card need' }, h('div', null, h('b', null, 'Cần xác nhận'), h('div', { class: 'muted' }, pend.length ? `${pend.length} điểm đang chờ` : 'Không có điểm nào đang chờ')),
       h('a', { class: 'btn pressable', href: '#/duyet' }, 'Xem')));
     else if (role() === 'recorder' && myPend) cards.push(h('section', { class: 'card' }, h('b', null, `${myPend} điểm đang chờ xác nhận`)));

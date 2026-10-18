@@ -6,6 +6,7 @@ import { emptyState, pageHeader, live, entryRow, reasonSheet } from '../ui/compo
 import { toast } from '../ui/toast.js';
 import { getSession, can } from '../session.js';
 import { stagger } from '../ui/anim.js';
+import { act } from '../ui/act.js';
 
 export default function review() {
   const body = h('div', { class: 'stack' });
@@ -17,11 +18,8 @@ export default function review() {
     if (!pend.length) out.push(emptyState({ icon: 'check', title: 'Không có gì cần xác nhận', text: 'Điểm chờ xác nhận sẽ hiện ở đây.' }));
     for (const e of pend) {
       const own = !can('approve', { entry: e });
-      const approve = h('button', { class: 'btn', type: 'button', disabled: own, onclick: async ev => {
-        ev.target.disabled = true;
-        try { await store.approveEntry(e.id); toast(`Đã xác nhận ${fmtPts(e.points)} cho ${gm.get(e.groupId)?.name || ''}`); }
-        catch (err) { ev.target.disabled = false; toast(err.message); }
-      } }, 'Xác nhận');
+      const approve = h('button', { class: 'btn', type: 'button', disabled: own, onclick: ev => act(() => store.approveEntry(e.id), { btn: ev.currentTarget,
+        ok: `Đã xác nhận ${fmtPts(e.points)} cho ${gm.get(e.groupId)?.name || ''}` }) }, 'Xác nhận');
       const reject = h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => reasonSheet({ title: 'Từ chối điểm này?',
         text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ bị thu hồi và không được tính.`, label: 'Từ chối',
         onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã từ chối'); } }) }, 'Từ chối');

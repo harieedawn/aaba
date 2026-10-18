@@ -4,6 +4,7 @@ import { rankGroups, personalPoints } from '../scoring.js';
 import { fmtNum, fmtPts } from '../format.js';
 import { emptyState, pageHeader, live, entryRow, entrySheet } from '../ui/components.js';
 import { stagger, setBar } from '../ui/anim.js';
+import { titleNames } from '../titles.js';
 
 const amt = n => h('span', { class: 'amt ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '') }, fmtPts(n));
 const sum = a => a.reduce((t, e) => t + e.points, 0);
@@ -16,9 +17,8 @@ export default function group({ params }) {
     const cats = S.config.categories, cid = S.config.currentCycleId;
     const r = rankGroups(S.groups, S.entries, cats, cid).find(x => x.group.id === id);
     const mine = S.entries.filter(e => e.groupId === id), ok = mine.filter(e => e.status === 'ok');
-    const titles = new Map((S.config.titles || []).map(t => [t.id, t.name]));
     const sm = new Map(S.students.map(s => [s.id, s]));
-    const members = S.students.filter(s => s.groupId === id && s.active !== false)
+    const members = S.students.filter(s => s.groupId === id)
       .map(s => ({ s, pts: personalPoints(s.id, S.entries, cid) }))
       .sort((a, b) => b.pts - a.pts || a.s.name.localeCompare(b.s.name, 'vi'));
     const recent = [...mine].sort((a, b) => b.at - a.at);
@@ -40,7 +40,7 @@ export default function group({ params }) {
         })),
       h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Thành viên')),
         members.length ? members.map(({ s, pts }) => h('div', { class: 'mem' },
-          h('div', { class: 'mem-name' }, h('div', null, s.name), s.titleId && titles.get(s.titleId) && h('div', { class: 'mem-title muted' }, titles.get(s.titleId))),
+          h('div', { class: 'mem-name' }, h('div', null, s.name), titleNames(s, S.config.titles) && h('div', { class: 'mem-title muted' }, titleNames(s, S.config.titles))),
           amt(pts)))
           : emptyState({ icon: 'user', title: 'Chưa có thành viên' })),
       h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Điểm trong đợt này')),

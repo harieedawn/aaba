@@ -3,10 +3,12 @@ import { h } from './dom.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
 import { icon } from './icons.js';
+import { errMsg } from './act.js';
+import { logError } from '../errors.js';
 
 export const field = (label, control, hint) => h('label', { class: 'field' },
   h('span', { class: 'field-l' }, label), control, hint && h('span', { class: 'hint' }, hint));
-export const textInput = (value = '', props = {}) => h('input', { class: 'input', type: 'text', autocomplete: 'off', value, ...props });
+export const textInput = (value = '', props = {}) => h('input', { class: 'input', type: 'text', autocomplete: 'off', maxlength: '80', value, ...props });
 export const numberInput = (value = 0, props = {}) => h('input', { class: 'input', type: 'number', step: '1', inputmode: 'numeric', value, ...props });
 export const textArea = (value = '', props = {}) => { const t = h('textarea', { class: 'input textarea', rows: '5', ...props }); t.value = value; return t; };
 // options: [{value,label}] or strings
@@ -27,7 +29,7 @@ export function checkInput(label, checked = false) {
   return el;
 }
 export function errBox() { return h('div', { class: 'form-err', role: 'alert', hidden: true }); }
-const showErr = (box, e) => { box.textContent = e.message || 'Có lỗi xảy ra'; box.hidden = false; };
+const showErr = (box, e) => { logError('form', e); box.textContent = errMsg(e); box.hidden = false; };
 
 // formSheet({title, body:[nodes], submit:'Lưu', onSubmit}) ; onSubmit may throw -> shown inline; resolves -> closes.
 export function formSheet({ title, body, submit = 'Lưu', danger = false, onSubmit }) {

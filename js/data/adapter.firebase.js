@@ -9,8 +9,16 @@ let F, AU, auth, db;
 const subs = new Set();
 let selfWatch = null, myRole = null;
 
+// ONE shared onSnapshot on config/main for every watcher (config view + entries 'current'); stops with the last watcher.
+const CS = new Set(); let csUn = null, csSnap = null;
+function cfgWatch(cb, fail) {
+  const w = { cb, fail }; CS.add(w);
+  if (!csUn) csUn = F.onSnapshot(ref('config'), s => { csSnap = s; [...CS].forEach(x => x.cb(s)); }, err => { csUn = null; csSnap = null; [...CS].forEach(x => x.fail(err)); });
+  else if (csSnap) queueMicrotask(() => CS.has(w) && w.cb(csSnap));
+  return () => { CS.delete(w); if (!CS.size && csUn) { csUn(); csUn = null; csSnap = null; } };
+}
 // ---- helpers ----
-const W = p => p.catch(e => { throw e && e.code === 'permission-denied' ? new Error('Không có quyền thực hiện thao tác này') : e; });
+const W = p => p.catch(e => { throw e && e.code === 'permission-denied' ? Object.assign(new Error('Bạn không có quyền làm việc này'), { code: e.code }) : e; });
 // Offline: the write is queued by the persistent cache and syncs later, so do not block the UI waiting for the server.
 const ack = p => navigator.onLine ? W(p) : (p.catch(() => {}), Promise.resolve());
 const ref = (col, id) => col === 'config' ? F.doc(db, 'config', 'main') : F.doc(db, col, id);
@@ -57,11 +65,11 @@ export function watch(col, cb, opts = {}) {
   const arr = s => cb(s.docs.map(docOf));
   sub.start = () => {
     sub.dead = false;
-    if (col === 'config') sub.stops.push(F.onSnapshot(ref('config'), s => cb(s.exists() ? docOf(s) : VIRTUAL_CONFIG()), fail));
+    if (col === 'config') sub.stops.push(cfgWatch(s => cb(s.exists() ? docOf(s) : VIRTUAL_CONFIG()), fail));
     else if (col === 'entries' && opts.cycle === 'current') {
       let cur, un = null;
       sub.stops.push(() => un && un());
-      sub.stops.push(F.onSnapshot(ref('config'), s => {
+      sub.stops.push(cfgWatch(s => {
         const id = s.exists() ? s.data().currentCycleId || null : null;
         if (un && id === cur) return;
         cur = id; if (un) un(); un = null;

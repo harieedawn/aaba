@@ -18,7 +18,7 @@ export default function rules() {
         h('div', { class: 'sec-h' }, h('h2', null, c.name), h('span', { class: 'muted', style: { fontSize: '13px' } }, `Điểm khởi đầu ${c.base}`)),
         rs.length ? rs.map(r => h('div', { class: 'rule' },
           h('div', { class: 'rule-main' }, h('div', null, r.name),
-            h('div', { class: 'rule-note muted' }, [SCOPE[r.scope], r.perUnit && 'Theo số lượng', r.duty && 'Tổ trực', admin && r.assumed && 'tạm tính'].filter(Boolean).join(' · ')),
+            h('div', { class: 'rule-note muted' }, [SCOPE[r.scope], r.perUnit && 'Theo số lượng', admin && r.assumed && 'tạm tính'].filter(Boolean).join(' · ')),
             r.note && h('div', { class: 'rule-note muted' }, r.note)),
           h('span', { class: 'amt ' + (r.points > 0 ? 'pos' : 'neg') }, fmtPts(r.points))))
           : emptyState({ icon: 'book', title: 'Chưa có thể lệ', text: 'Nhóm này chưa có tiêu chí nào.' })));

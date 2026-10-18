@@ -3,6 +3,7 @@ import { h, put } from './ui/dom.js';
 import { emptyState } from './ui/components.js';
 import { can, onSession, getSession } from './session.js';
 import { reduced } from './ui/anim.js';
+import { logError } from './errors.js';
 
 const ROUTES = [
   [/^\/$/, { load: () => import('./views/home.js') }],
@@ -40,9 +41,16 @@ export function startRouter(outlet, { onRoute } = {}) {
     let view;
     try {
       if (r.def.guard && !can(r.def.guard)) view = stub(r.def, true);
-      else view = r.def.load ? (await r.def.load()).default({ params: r.params, path: r.path }) : stub(r.def);
+      else {
+        let mod;
+        try { mod = r.def.load ? await r.def.load() : null; }
+        catch (e) { logError('import', e); throw Object.assign(new Error('import'), { stale: true }); }
+        view = mod ? mod.default({ params: r.params, path: r.path }) : stub(r.def);
+      }
     } catch (e) {
-      view = { el: emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: e.message }) };
+      if (!e.stale) logError('view', e);
+      view = { el: emptyState({ icon: 'x', title: e.stale ? 'Không tải được trang này' : 'Có lỗi xảy ra',
+        text: e.stale ? 'Có thể đã có bản cập nhật mới hoặc mạng yếu. Hãy tải lại trang.' : 'Không mở được mục này. Hãy thử tải lại.', action: { label: 'Tải lại', onClick: () => location.reload() } }) };
     }
     if (t !== token) return view.destroy?.();
     const vt = !first && document.startViewTransition && !reduced();

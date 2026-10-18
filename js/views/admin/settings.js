@@ -4,6 +4,7 @@ import * as store from '../../data/store.js';
 import { live } from '../../ui/components.js';
 import { toast } from '../../ui/toast.js';
 import { field, textInput, numberInput, checkInput, errBox } from '../../ui/form.js';
+import { errMsg } from '../../ui/act.js';
 
 export default function settingsView() {
   const body = h('div', { class: 'stack' });
@@ -23,7 +24,7 @@ export default function settingsView() {
       if (!(w >= 1 && w <= 12) || bs.some(n => !Number.isFinite(n))) { err.textContent = 'Số tuần từ 1 đến 12, điểm khởi đầu phải là số'; err.hidden = false; return; }
       ok.disabled = true;
       try { await store.saveDoc('config', null, { className: name.value.trim(), school: school.value.trim(), cycleWeeks: w, openView: open.input.checked, categories: c.categories.map((k, n) => ({ ...k, base: bs[n] })) }); toast('Đã lưu cài đặt'); }
-      catch (e) { err.textContent = e.message; err.hidden = false; ok.disabled = false; }
+      catch (e) { err.textContent = errMsg(e); err.hidden = false; ok.disabled = false; }
     });
     return h('section', { class: 'card' }, form);
   });

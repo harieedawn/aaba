@@ -1,13 +1,14 @@
-// Ghi điểm: sheet flow. Tổ -> Học sinh -> Mục -> (qty) -> (note) -> big button. Duty rules go to the tổ on duty.
+// Ghi điểm: sheet flow. Tổ -> Học sinh -> Mục -> (qty) -> (note) -> big button.
 import { h, put } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import * as store from '../data/store.js';
-import { fmtPts, fmtNum, weekKey } from '../format.js';
+import { fmtPts, fmtNum } from '../format.js';
 import { dot, pageHeader, live, entryRow, entrySheet, emptyState } from '../ui/components.js';
 import { openSheet } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { getSession, can, role } from '../session.js';
 import { navigate } from '../router.js';
+import { act } from '../ui/act.js';
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
 let lastGroup = null; // "Ghi tiếp" / next visit keeps the tổ
@@ -16,7 +17,7 @@ const fresh = g => ({ g, stu: undefined, cat: '', q: '', sq: '', rule: null, qty
 export default function add() {
   let D = null, sh = null, closing = false;
   const body = h('div', { class: 'stack' });
-  const stop = live(body, ['config', 'groups', 'students', 'rules', 'entries', 'duty'], (S, first) => {
+  const stop = live(body, ['config', 'groups', 'students', 'rules', 'entries'], (S, first) => {
     D = S;
     if (first) queueMicrotask(openFlow);
     const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(s => [s.id, s]));
@@ -30,12 +31,11 @@ export default function add() {
     if (sh || !D) return;
     const me = getSession(), rec = role() === 'recorder';
     let st = fresh(rec ? me.groupId : D.groups.some(g => g.id === lastGroup) ? lastGroup : D.groups[0]?.id);
-    const dutyG = () => D.duty.find(d => d.id === weekKey(Date.now()))?.groupId || null;
-    const eg = () => (st.rule?.duty ? dutyG() : st.g);
+    const eg = () => st.g;
     const lab = t => h('div', { class: 'add-lab' }, t);
     const stepH = (n, t) => h('div', { class: 'step-h' }, `Bước ${n}/3 · ${t}`);
     const signSeg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Loại điểm' });
-    const gBox = h('div', { class: 'fchips tiles', role: 'group', 'aria-label': 'Tổ' }), gHint = h('div', { class: 'hint', hidden: true });
+    const gBox = h('div', { class: 'fchips tiles', role: 'group', 'aria-label': 'Tổ' }),;
     const sIn = h('input', { class: 'input', placeholder: 'Tìm học sinh', 'aria-label': 'Tìm học sinh', oninput: e => { st.sq = e.target.value; paintS(); } });
     const sChips = h('div', { class: 'pick' });
     const sSec = h('div', { class: 'add-sec' }, lab('Học sinh'), sIn, h('div', { style: { height: '8px' } }), sChips);
@@ -44,25 +44,22 @@ export default function add() {
     const qOut = h('output', null, '1');
     const stepBtn = (d, t, l) => h('button', { class: 'pressable', type: 'button', 'aria-label': l, onclick: () => { st.qty = Math.min(99, Math.max(1, st.qty + d)); paintQ(); paintSubmit(); } }, icon(d > 0 ? 'plus' : 'minus', 20));
     const qSec = h('div', { class: 'add-sec' }, lab('Số lượng'), h('div', { class: 'stepper' }, stepBtn(-1, '', 'Giảm'), qOut, stepBtn(1, '', 'Tăng')));
-    const note = h('input', { class: 'input', placeholder: 'Ghi chú (không bắt buộc)', 'aria-label': 'Ghi chú', maxlength: '200' });
+    const note = h('input', { class: 'input', placeholder: 'Ghi chú (không bắt buộc)', 'aria-label': 'Ghi chú', maxlength: '500' });
     const submit = h('button', { class: 'btn', type: 'button' }), subHint = h('div', { class: 'hint', hidden: true });
-    const form = h('div', null, h('div', { class: 'add-sec' }, stepH(1, 'Chọn tổ và học sinh'), gBox, gHint), sSec,
+    const form = h('div', null, h('div', { class: 'add-sec' }, stepH(1, 'Chọn tổ và học sinh'), gBox), sSec,
       h('div', { class: 'add-sec' }, stepH(2, 'Chọn nội dung'), signSeg, h('div', { style: { height: '8px' } }), rIn, h('div', { style: { height: '8px' } }), cats, rList), qSec,
       h('div', { class: 'add-sec' }, stepH(3, 'Xác nhận'), note), h('div', { class: 'add-submit' }, submit, subHint));
     const cont = h('div', null, form);
 
     function paintG() {
-      const r = st.rule, cur = eg(), list = r?.duty ? D.groups.filter(g => g.id === cur) : rec ? D.groups.filter(g => g.id === me.groupId) : D.groups;
-      put(gBox, ...list.map(g => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(g.id === cur), disabled: rec || !!r?.duty,
+      const cur = eg(), list = rec ? D.groups.filter(g => g.id === me.groupId) : D.groups;
+      put(gBox, ...list.map(g => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(g.id === cur), disabled: rec,
         onclick: () => { st.g = g.id; lastGroup = g.id; st.stu = undefined; paintAll(); } }, dot(g.color), g.name)));
-      const dg = D.groups.find(g => g.id === dutyG());
-      gHint.hidden = !r?.duty;
-      gHint.textContent = r?.duty ? (dg ? `Nội dung trực nhật: tính cho tổ trực tuần này (${dg.name}).` : 'Chưa phân công tổ trực tuần này.') : '';
     }
     function paintS() {
       const r = st.rule, g = eg();
       sSec.hidden = r?.scope === 'group';
-      const q = norm(st.sq), ss = D.students.filter(s => s.groupId === g && s.active !== false && norm(s.name).includes(q));
+      const q = norm(st.sq), ss = D.students.filter(s => s.groupId === g && norm(s.name).includes(q));
       const pick = (v, label) => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(st.stu === v), onclick: () => { st.stu = v; paintS(); paintSubmit(); } }, label);
       put(sChips, ...(r?.scope === 'student' ? [] : [pick('G', 'Cả tổ')]), ...ss.map(s => pick(s.id, s.name)));
     }
@@ -79,7 +76,7 @@ export default function add() {
       signSeg.classList.toggle('neg', st.sign === 'neg');
       const f = all.filter(r => (r.points < 0) === (st.sign === 'neg') && (!st.cat || r.cat === st.cat) && (!q || norm(r.name).includes(q)));
       const row = r => h('button', { class: 'rule-pick pressable', type: 'button', 'aria-pressed': String(st.rule?.id === r.id), onclick: () => pickRule(r) },
-        h('span', { class: 'rule-main' }, h('span', null, r.name), r.duty && h('span', { class: 'rule-note muted', style: { display: 'block' } }, 'Tổ trực')),
+        h('span', { class: 'rule-main' }, h('span', null, r.name)),
         h('span', { class: 'amt ' + (r.points > 0 ? 'pos' : 'neg') }, fmtPts(r.points)));
       const hot = q || st.cat ? [] : f.filter(isHot), rest = q || st.cat ? f.sort((a, b) => isHot(b) - isHot(a)) : f.filter(r => !isHot(r));
       put(rList, ...(hot.length ? [lab('Thường dùng'), ...hot.map(row), lab('Tất cả nội dung')] : []), ...rest.map(row),
@@ -96,8 +93,8 @@ export default function add() {
       const stuOk = r && (r.scope === 'group' || (r.scope === 'student' ? st.stu && st.stu !== 'G' : st.stu !== undefined));
       let text = '', ok = false;
       if (!r) text = 'Chọn nội dung';
-      else if (!grp) text = r.duty ? 'Chưa phân công tổ trực' : 'Chọn tổ';
-      else if (!can('record', { groupId: gid })) text = r.duty ? `Nội dung này chỉ ghi cho tổ trực (${grp.name})` : 'Bạn không được ghi cho tổ này';
+      else if (!grp) text = 'Chọn tổ';
+      else if (!can('record', { groupId: gid })) text = 'Bạn không được ghi cho tổ này';
       else if (!stuOk) text = r.scope === 'student' ? 'Chọn học sinh' : 'Chọn học sinh hoặc Cả tổ';
       else { ok = true; const n = fmtNum(Math.abs(r.points * st.qty)); text = r.points < 0 ? `Trừ ${n} điểm của ${grp.name}` : `Cộng ${n} điểm cho ${grp.name}`; }
       submit.textContent = text; submit.disabled = !ok; submit.className = 'btn' + (ok && r.points < 0 ? ' neg' : '');
@@ -106,11 +103,9 @@ export default function add() {
     }
     const paintAll = () => { paintG(); paintS(); paintR(); paintQ(); paintSubmit(); };
 
-    submit.onclick = async () => {
+    submit.onclick = () => {
       const r = st.rule, gid = eg(), studentId = r.scope === 'group' || st.stu === 'G' ? null : st.stu;
-      submit.disabled = true;
-      try { success(await store.addEntry({ groupId: gid, studentId, ruleId: r.id, qty: st.qty, note: note.value })); }
-      catch (err) { submit.disabled = false; toast(err.message || 'Không ghi được. Thử lại nhé.'); }
+      act(async () => success(await store.addEntry({ groupId: gid, studentId, ruleId: r.id, qty: st.qty, note: note.value })), { btn: submit });
     };
     function success(e) {
       const grp = D.groups.find(g => g.id === e.groupId), stu = D.students.find(s => s.id === e.studentId);
@@ -121,7 +116,7 @@ export default function add() {
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sh.close() }, 'Xong'),
           h('button', { class: 'btn', type: 'button', onclick: () => { st = fresh(st.g); sIn.value = rIn.value = note.value = ''; put(cont, form); paintAll(); } }, 'Ghi tiếp'))));
       toast(`${fmtPts(e.points)} cho ${grp?.name || ''}`, { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
-        store.voidEntry(e.id, 'hoàn tác').then(() => { title.textContent = 'Đã hoàn tác'; toast('Đã hoàn tác'); }, err => toast(err.message)) } });
+        act(async () => { await store.voidEntry(e.id, 'hoàn tác'); title.textContent = 'Đã hoàn tác'; }, { ok: 'Đã hoàn tác' }) } });
     }
     sh = openSheet({ title: 'Ghi điểm', content: cont, onClose: () => { sh = null; if (!closing) navigate('/'); } });
     paintAll();

@@ -1,6 +1,7 @@
 // Tôi: my card, role cards (phone), theme, install hint, sign out, version.
 import { h } from '../ui/dom.js';
 import { namePicker, notifRow } from './me-parts.js';
+import { titleNames } from '../titles.js';
 import { notifs, lastSeen, markSeen } from '../notify.js';
 import { icon } from '../ui/icons.js';
 import * as store from '../data/store.js';
@@ -9,6 +10,7 @@ import { fmtPts } from '../format.js';
 import { pageHeader, live, entryRow, entrySheet, emptyState } from '../ui/components.js';
 import { getSession, can, role, setPreview, ROLE_LABEL, getThemePref, setTheme } from '../session.js';
 import { APP_VERSION } from '../config.js';
+import { act } from '../ui/act.js';
 
 const link = (href, ic, label, badge) => h('a', { class: 'row-link pressable', href },
   icon(ic, 22), h('span', { class: 'grow' }, label), badge ? h('span', { class: 'badge' }, badge) : null, icon('chevron', 20));
@@ -40,7 +42,7 @@ export default function me() {
     if (guest && !s.studentId) return [pageHeader('Tôi'), namePicker(S.groups, S.students), codeLink, h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg())];
     queueMicrotask(markSeen);
     const nf = notifs().slice(0, 20);
-    const g = S.groups.find(x => x.id === s.groupId), title = (S.config.titles || []).find(t => t.id === s.titleId);
+    const g = S.groups.find(x => x.id === s.groupId), me0 = S.students.find(x => x.id === s.studentId), tn = titleNames(me0 || s, S.config.titles);
     const pending = S.entries.filter(e => e.status === 'pending').length;
     const mineAbout = !!s.studentId;
     const mine = S.entries.filter(e => (mineAbout ? e.studentId === s.studentId : e.by === s.uid) && e.status !== 'void').sort((a, b) => b.at - a.at);
@@ -54,7 +56,7 @@ export default function me() {
       h('section', { class: 'card' },
         h('div', { class: 'prof' }, h('span', { class: 'tile', 'aria-hidden': 'true' }, initials(s.name)),
           h('div', null, h('h2', null, s.name || 'Khách'),
-            h('div', { class: 'muted' }, [ROLE_LABEL[r], title?.name, g?.name].filter(Boolean).join(' · ')))),
+            h('div', { class: 'muted' }, [ROLE_LABEL[r], tn, g?.name].filter(Boolean).join(' · ')))),
         pts !== null && h('div', { class: 'kv' }, h('span', { class: 'muted' }, 'Điểm cá nhân đợt này'), h('span', { class: 'me-big' }, fmtPts(pts)))),
       s.studentId && h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Thông báo')),
         nf.length ? nf.map(e => notifRow(e, e.at > seenAtOpen)) : emptyState({ icon: 'clock', title: 'Chưa có thông báo', text: 'Khi có điểm cộng hoặc trừ cho bạn, thông báo sẽ hiện ở đây.' }),
@@ -66,10 +68,10 @@ export default function me() {
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => setPreview(null) }, 'Thoát xem thử'))) : null,
       h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg()),
       installHint(),
-      guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => store.pickStudent(null) }, 'Đổi tên'), h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'),
+      guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.pickStudent(null), { btn: ev.currentTarget }) }, 'Đổi tên'), h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'),
         h('p', { class: 'muted', style: { textAlign: 'center', fontSize: '13px' } }, `aaba ${APP_VERSION}`))
       : h('section', { class: 'card' },
-        h('button', { class: 'btn btn-ghost', style: { width: '100%' }, onclick: () => store.signOut() }, 'Đăng xuất'),
+        h('button', { class: 'btn btn-ghost', style: { width: '100%' }, onclick: ev => act(() => store.signOut(), { btn: ev.currentTarget }) }, 'Đăng xuất'),
         h('p', { class: 'muted', style: { textAlign: 'center', marginTop: '12px', fontSize: '13px' } }, `aaba ${APP_VERSION}`)),
     ];
   });

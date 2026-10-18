@@ -1,4 +1,4 @@
-// Dev: first-run setup wizard (số tổ/tên/màu -> dán thành viên từng tổ -> thể lệ mẫu + lịch trực). Only when no groups.
+// Dev: first-run setup wizard (số tổ/tên/màu -> dán thành viên từng tổ -> thể lệ mẫu). Only when no groups.
 import { h, put } from '../../ui/dom.js';
 import * as store from '../../data/store.js';
 import { navigate } from '../../router.js';
@@ -6,12 +6,12 @@ import { toast } from '../../ui/toast.js';
 import { emptyState, dot } from '../../ui/components.js';
 import { field, textInput, textArea, checkInput, colorPicker, COLOR_IDS, errBox } from '../../ui/form.js';
 import { seedRules, CATEGORIES, TITLES } from '../../data/seed.js';
-import { roundRobin } from '../admin/duty.js';
+import { errMsg } from '../../ui/act.js';
 
 const once = col => new Promise(r => { let u; u = store.on(col, v => { queueMicrotask(() => u?.()); r(v); }); });
 const lines = t => t.split(/\r?\n/).map(x => x.replace(/^(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(Boolean);
 
-async function finish(st, rules, duty) {
+async function finish(st, rules) {
   const [cfg, cycles] = await Promise.all([once('config'), once('cycles')]);
   const groups = {}, students = {}, list = [];
   st.groups.forEach((g, i) => {
@@ -25,7 +25,6 @@ async function finish(st, rules, duty) {
   if (cfg._virtual) config.openView = true;
   const obj = { v: 1, config, groups, students };
   if (rules) obj.rules = seedRules();
-  if (duty) obj.duty = roundRobin(list);
   if (!cfg.currentCycleId || !cycles.some(c => c.id === cfg.currentCycleId)) {
     config.currentCycleId = 'c1'; obj.cycles = { c1: { n: 1, start: Date.now(), end: null, closed: false, summary: [] } };
   }
@@ -60,13 +59,13 @@ export default function setup() {
   }
   function s2() {
     const total = st.groups.reduce((n, _, i) => n + lines(st.members[i] || '').length, 0);
-    const r = checkInput(`Nạp thể lệ mẫu (${Object.keys(seedRules()).length} tiêu chí theo quy định lớp)`, true), d = checkInput('Tạo lịch trực nhật xoay vòng 8 tuần', true), err = errBox();
+    const r = checkInput(`Nạp thể lệ mẫu (${Object.keys(seedRules()).length} tiêu chí theo quy định lớp)`, true), err = errBox();
     const done = nav(() => go(1), async ev => {
       ev.target.disabled = true; err.hidden = true;
-      try { const x = await finish(st, r.input.checked, d.input.checked); toast(`Đã tạo ${x.g} tổ, ${x.s} học sinh`); navigate('/'); }
-      catch (e) { err.textContent = e.message; err.hidden = false; ev.target.disabled = false; }
+      try { const x = await finish(st, r.input.checked); toast(`Đã tạo ${x.g} tổ, ${x.s} học sinh`); navigate('/'); }
+      catch (e) { err.textContent = errMsg(e); err.hidden = false; ev.target.disabled = false; }
     }, 'Hoàn tất');
-    return [h('div', { class: 'card' }, h('strong', null, `${st.className.trim() || 'Lớp'}: ${st.groups.length} tổ, ${total} học sinh`)), r, d, err, done];
+    return [h('div', { class: 'card' }, h('strong', null, `${st.className.trim() || 'Lớp'}: ${st.groups.length} tổ, ${total} học sinh`)), r, err, done];
   }
   const paint = () => put(body, bar(), h('div', { class: 'form' }, [s0, s1, s2][st.step]()));
   once('groups').then(gs => gs.length
