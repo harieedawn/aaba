@@ -2,12 +2,13 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { fmtPts, relTime, fmtDate, fmtTime } from '../format.js';
+const CAT_ICON = { noiquy: 'shield', hoctap: 'book', phongtrao: 'flag' };
 import { getTheme, setTheme, onTheme, can } from '../session.js';
 import * as store from '../data/store.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
 
-export const logo = () => h('span', { class: 'logo' }, h('span', { class: 'logo-sq', 'aria-hidden': 'true' }), h('span', { class: 'logo-t' }, 'aaba'));
+export const logo = () => h('span', { class: 'logo' }, h('span', { class: 'logo-sq', 'aria-hidden': 'true' }, 'a'), h('span', { class: 'logo-t' }, 'aaba'));
 export const dot = color => h('span', { class: `dot g-${color || 'slate'}`, 'aria-hidden': 'true' });
 export const chip = (kids, tone = '') => h('span', { class: 'chip ' + tone }, kids);
 export const pointsChip = n => chip(fmtPts(n), n > 0 ? 'pos' : n < 0 ? 'neg' : '');
@@ -34,15 +35,18 @@ export function themeToggle() {
   return b;
 }
 
-export function entryRow(e, { group, student, onOpen } = {}) {
+export function entryRow(e, { group, student, onOpen, catId } = {}) {
   const who = e.studentId ? student?.name || 'Học sinh' : 'Cả tổ';
+  const cat = catId || e.catId || e.categoryId || e.cat;
+  const amt = h('span', { class: 'amt ' + (e.points > 0 ? 'pos' : e.points < 0 ? 'neg' : '') }, fmtPts(e.points));
   const row = h('div', { class: 'entry' + (e.status === 'void' ? ' is-void' : '') + (onOpen ? ' pressable' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
-    dot(group?.color),
+    h('span', { class: 'ico-tile', 'aria-hidden': 'true' }, icon(CAT_ICON[cat] || 'flag', 20)),
     h('div', { class: 'entry-main' },
       h('div', { class: 'entry-name' }, e.ruleName),
-      h('div', { class: 'entry-sub muted' }, `${group?.name || ''}, ${who}, ${relTime(e.at)}`)),
-    h('div', { class: 'entry-pts' }, pointsChip(e.points),
-      e.status === 'pending' && chip('chờ duyệt', 'warn'), e.status === 'void' && chip('đã hủy')));
+      h('div', { class: 'entry-sub muted' }, `${group?.name || ''} · ${who} · ${relTime(e.at)}`)),
+    h('div', { class: 'entry-pts' }, amt,
+      e.status === 'pending' && h('span', { class: 'pend' }, icon('clock', 14), 'chờ xác nhận'),
+      e.status === 'void' && h('span', { class: 'void-t' }, 'Đã thu hồi')));
   if (onOpen) {
     row.addEventListener('click', () => onOpen(e));
     row.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onOpen(e); } });
@@ -74,7 +78,7 @@ export function live(el, cols, render, opts = {}) {
 
 // Shared "reason required" confirm sheet (void / reject).
 export function reasonSheet({ title, text, label, onSubmit }) {
-  const ta = h('textarea', { class: 'input textarea', rows: '3', placeholder: 'Lý do (bắt buộc)', 'aria-label': 'Lý do' });
+  const ta = h('textarea', { class: 'input textarea', rows: '3', placeholder: 'Lý do thu hồi (bắt buộc)', 'aria-label': 'Lý do thu hồi' });
   const err = h('div', { class: 'form-err', role: 'alert', hidden: true }, 'Cần nhập lý do.');
   const ok = h('button', { class: 'btn btn-danger', type: 'button' }, label);
   const sh = openSheet({ title, content: h('div', { class: 'form' }, text && h('p', { class: 'muted' }, text), ta, err,
@@ -91,7 +95,7 @@ export function reasonSheet({ title, text, label, onSubmit }) {
 
 export function entrySheet(e, { group, student, readOnly } = {}) {
   const kv = (k, v) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', null, v));
-  const status = { ok: chip('đã duyệt', 'pos'), pending: chip('chờ duyệt', 'warn'), void: chip('đã hủy', 'neg') }[e.status];
+  const status = { ok: chip('đã xác nhận', 'pos'), pending: chip('chờ xác nhận', 'warn'), void: chip('Đã thu hồi', 'neg') }[e.status];
   const canVoid = !readOnly && e.status !== 'void' && can('void', { entry: e });
   const sh = openSheet({ title: 'Chi tiết điểm', content: h('div', { class: 'detail' },
     h('div', { class: 'detail-top' }, h('div', { class: 'detail-name' }, e.ruleName), pointsChip(e.points)),
@@ -101,11 +105,11 @@ export function entrySheet(e, { group, student, readOnly } = {}) {
     kv('Thời gian', `${fmtDate(e.at)} ${fmtTime(e.at)}`),
     kv('Người ghi', e.byName), kv('Trạng thái', status),
     e.note && kv('Ghi chú', e.note),
-    e.status === 'void' && kv('Lý do hủy', e.voidReason),
+    e.status === 'void' && kv('Lý do thu hồi', e.voidReason),
     canVoid && h('button', { class: 'btn btn-ghost detail-void', onclick: () => {
       sh.close();
-      reasonSheet({ title: 'Hủy điểm này?', text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ không còn được tính.`, label: 'Hủy điểm',
-        onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã hủy điểm'); } });
-    } }, 'Hủy điểm')) });
+      reasonSheet({ title: 'Thu hồi điểm này?', text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ không còn được tính.`, label: 'Thu hồi điểm',
+        onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã thu hồi điểm'); } });
+    } }, 'Thu hồi điểm')) });
   return sh;
 }
