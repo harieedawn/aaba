@@ -1,5 +1,6 @@
 // Hand-written inline SVG icons (24 grid, stroke 1.75, round caps).
 const P = {
+  crown: 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z',
   rank: 'M3 21h18M5 21v-8h4v8M10 21V4h4v17M15 21v-5h4v5',
   history: 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2',
   plus: 'M12 5v14M5 12h14',

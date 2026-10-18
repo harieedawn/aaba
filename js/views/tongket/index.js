@@ -9,6 +9,7 @@ import { pageHeader, skeletonCards, emptyState } from '../../ui/components.js';
 import { renderWeek } from './week.js';
 import { multiView } from './multi.js';
 import { adminExtras } from './admin.js';
+import { currentWeekSheet } from '../chieu/notice.js';
 
 const MODES = [['tuan', 'Tuần'], ['thang', 'Tháng'], ['quy', '3 tháng']];
 const go = (m, k) => navigate(`/tongket/${m}/${k}`);
@@ -20,7 +21,7 @@ export default function tongket({ params: [pm, pk] }) {
   const M = {}, S = { pend: 0 };
   let sub = null, tok = 0, gone = false;
   const banner = h('div'), nav = h('div', { class: 'wknav' }), seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Kiểu tổng kết' }), body = h('div', { class: 'stack' }, ...skeletonCards(3));
-  const presLink = h('a', { class: 'btn btn-ghost tk-pres', href: '#/chieu/' + key }, icon('present', 20), 'Trình chiếu'), presRow = h('div', { class: 'tk-pres-row' }, presLink);
+  const presLink = h('a', { class: 'btn btn-ghost tk-pres', href: '#/chieu/' + key, onclick: e => { if (W.keyToStart(key) !== cur || e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); const k = key; currentWeekSheet(W.daysLeft(Date.now()), () => navigate('/chieu/' + k)); } }, icon('present', 20), 'Trình chiếu'), presRow = h('div', { class: 'tk-pres-row' }, presLink);
   const reload = h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => load(true) }, 'Tải lại');
   const el = h('div', { class: 'view narrow tk' }, pageHeader('Tổng kết'), banner, seg, presRow, nav, h('p', { class: 'muted tk-note' }, 'Tuần tính vào tháng của ngày thứ 6'), body, h('div', { class: 'tk-reload' }, reload));
   const ready = () => ['config', 'groups', 'students'].every(k => M[k] !== undefined);
@@ -35,7 +36,7 @@ export default function tongket({ params: [pm, pk] }) {
     const last = w ? s >= cur : key >= curMonth;
     const btn = (ic, l, k, off) => h('button', { class: 'icon-btn pressable', type: 'button', 'aria-label': l, disabled: off, onclick: () => go(mode, k) }, icon(ic, 20));
     put(nav, btn('chevron-left', w ? 'Tuần trước' : 'Tháng trước', prv, false), h('div', { class: 'wknav-t' }, h('b', null, lab),
-      h('span', { class: 'muted' }, w ? (s === cur ? 'đang diễn ra' : W.monthLabel(W.monthOfWeek(s).key)) : mode === 'quy' ? '3 tháng gần nhất' : '')), btn('chevron', w ? 'Tuần sau' : 'Tháng sau', nxt, last));
+      h('span', { class: w && s === cur ? 'pill-live' : 'muted' }, w ? (s === cur ? 'đang diễn ra' : W.monthLabel(W.monthOfWeek(s).key)) : mode === 'quy' ? '3 tháng gần nhất' : '')), btn('chevron', w ? 'Tuần sau' : 'Tháng sau', nxt, last));
   }
   function load(fresh) {
     if (!ready()) return;

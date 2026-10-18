@@ -4,17 +4,19 @@ import { fmtNum } from '../format.js';
 const EASE = 'cubic-bezier(.2,.8,.2,1)';
 export const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function countUp(el, to, from = el._v ?? 0, dur = 600) {
+// Returns a finish handle (jumps to the final text) or null when nothing animates. onEnd fires on natural end and on finish.
+export function countUp(el, to, from = el._v ?? 0, dur = 600, onEnd, fmt = fmtNum) {
   el._v = to;
   cancelAnimationFrame(el._raf);
-  if (reduced() || from === to) { el.textContent = fmtNum(to); return; }
+  if (reduced() || from === to) { el.textContent = fmt(to); return null; }
   const t0 = performance.now();
   const step = now => {
     const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
-    el.textContent = fmtNum(Math.round(from + (to - from) * e));
-    if (p < 1) el._raf = requestAnimationFrame(step);
+    el.textContent = fmt(Math.round(from + (to - from) * e));
+    if (p < 1) el._raf = requestAnimationFrame(step); else onEnd?.();
   };
   el._raf = requestAnimationFrame(step);
+  return () => { cancelAnimationFrame(el._raf); el.textContent = fmt(to); onEnd?.(); };
 }
 
 // FLIP: measure, run mutate() (reorders DOM), animate each child from old to new position.

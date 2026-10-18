@@ -16,7 +16,7 @@ export function multiView({ mode, key, M, fresh }) {
   function paint() {
     const rows = M.groups.map(g => ({ g, t: total(g.id) })).sort((a, b) => b.t - a.t || a.g.name.localeCompare(b.g.name, 'vi'));
     rows.forEach((r, i) => { r.rank = i && r.t === rows[i - 1].t ? rows[i - 1].rank : i + 1; });
-    const th = w => h('th', null, h('div', null, W.label(w).replace(' → ', ' →\u00a0')), w === cur && h('div', { class: 'tag' }, 'đang diễn ra'));
+    const th = w => h('th', null, h('div', null, W.label(w).replace(' → ', ' →\u00a0')), w === cur && h('div', { class: 'tag pill-live' }, 'đang diễn ra'));
     const cell = (g, w) => h('td', null, w > cur ? '—' : D.get(w) ? fmtNum(groupScore(g.id, D.get(w).entries, M.config.categories).total) : failed.has(w) ? '!' : '…');
     const table = h('div', { class: 'tk-tw' }, h('table', { class: 'tk-t' },
       h('thead', null, h('tr', null, h('th', null, 'Hạng'), h('th', null, 'Tổ'), weeks.map(th), h('th', null, 'Tổng'))),
