@@ -6,9 +6,6 @@
 .chip.pos{background:var(--pos-tint);color:var(--pos-text)}
 .chip.neg{background:var(--neg-tint);color:var(--neg-text)}
 .chip.warn{background:var(--warn-tint);color:var(--warn-text)}
-.duty{margin-bottom:var(--sp-4)}
-.duty:empty{display:none}
-.chip.duty-chip{min-height:32px;padding:0 var(--sp-3);font-size:var(--fs-13);background:var(--surface);border:1px solid var(--border);color:var(--text)}
 /* leaderboard */
 .lb{display:grid;gap:var(--sp-3)}
 .lb-hero{position:relative;display:block;padding:var(--sp-6);border-radius:var(--r-l);background:var(--gc);color:var(--go)}
@@ -40,7 +37,6 @@
 .hello{font-size:var(--fs-30);font-weight:700;letter-spacing:-.01em;line-height:1.2}
 .lead{color:var(--text-2);margin-top:var(--sp-1)}
 .side-stack{display:grid;gap:var(--sp-4)}
-.duty-card{display:flex;align-items:center;gap:var(--sp-3)}
 .need{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
 .need b{font-size:var(--fs-17)}
 /* entries */
