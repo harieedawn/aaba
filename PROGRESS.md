@@ -1,6 +1,35 @@
-**TODO (bắt buộc): Re-publish firestore.rules in the Firebase console (Firestore → Rules → Publish)**
+**TODO (bắt buộc): Re-publish firestore.rules in the Firebase console (Firestore → Rules → Publish)** — Step 4 changes the rules (backdated entries + delete of voided entries).
 
 # aaba — PROGRESS
+## Week model v3 (log)
+- Model: week = Saturday 00:00 VN → Friday 24:00 (Sunday/Mon–Fri belong to the week begun the previous Saturday); key = ISO date of the Saturday; month = month of the Friday; scores restart each week from config.categories[].base. All in js/weeks.js (pure, VN = UTC+7 fixed; selftest under 2 TZs). Label format "T7 17/10 → T6 23/10" (day/month not zero-padded).
+- Step 1 DONE: weeks.js(+selftest); store: onWeek (auto rollover: timer + visibility/focus/online), weekEntries (mem + localStorage `aaba.wk.<key>`, TTL 1h last 2 weeks / 6h older, cap 1000 -> {entries,truncated,at}), invalidateWeek, pendingEntries, studentEntries, stats(); closeCycle removed. adapter.firebase: Timestamp range on `at`, status==, studentId== (ONE field per query), entriesBetween, set raw numeric at -> Timestamp, batch(ops), docs counter. adapter.local/seed: same API, demo spread over 5 weeks incl. pending/void.
+- store.js re-exports the week API from js/data/weekstore.js (keeps files ≲200 lines).
+- Step 2 DONE: all views off cycles. home (week header "Tuần T7 17/10 → T6 23/10 · còn N ngày" / "Hôm nay chốt tuần", 7-day bar, rollover toast linking #/tongket, Saturday recap card, other days small link), feed (current week live, ‹ › older weeks via weekEntries; past weeks read-only unless can('backdate')), group (week), review + nav badge (pendingEntries, any week), notify + Tôi (studentEntries; Tôi shows "Điểm tuần này"). live() got opts.src + weekSrc/pendingSrc/studentSrc. store.on('entries') now throws; adapters refuse an entries watch without range|status|studentId. Removed: admin 'vong' (cycle.js, listed in DELETE.txt), cycleWeeks input in settings (field stays in data, untouched), cycleInfo/cycleSummary, 'Đợt' copy. Base-score change now recomputes past weeks too (copy says so). Nav: Xếp hạng · Tổng kết · (Ghi điểm) · Thể lệ · Tôi on phone; Nhật ký/Xác nhận/Quản lý rail-only (home "Xem tất cả" -> Nhật ký). #/tongket is a "Sắp có" stub until Step 3.
+- Dormant (kept on purpose): cycles docs, config.currentCycleId, entry.cycleId (rules require it), export/import of cycles, dev setup/reset writing c1. importConfig 'replace' (dev only) still lists entries to clear them.
+## Step 3 (Tổng kết) DONE
+- js/views/tongket/{index,week,multi,parts,tags,admin}.js; route #/tongket[/:mode/:key] (tuan|thang|quy, default = previous week). `.grow` fixed in weeks.css. Current week always fetched fresh; others via weekEntries cache; "Tải lại" = fresh. Tháng/3 tháng fetch weeks sequentially (skeleton, max 14, future weeks skipped); row click = per-tổ drill-down from fetched data (link to week view). Staff banner "N điểm chờ xác nhận" → #/duyet. Home "Hoạt động gần đây" already excluded voided. Nhật ký hides voided behind chip "Hiện đã thu hồi (n)" (status chip 'Đã thu hồi' removed).
+- weekstore.invalidateWeek dispatches window event `aaba:inv`; Tổng kết and Nhật ký (past weeks) reload on it. store.voidEntry/approveEntry invalidate the entry's week.
+## Step 4 (corrections of the past) DONE
+- firestore.rules: ONLY (a) validEntry accepts optional addedAt/replaces + `entryTime()` (normal | admin-backdated), (b) delete = dev OR staff on status=='void'.
+- Client: store.addEntry({at}) (admin/dev; 199d window), store.editEntry (ONE batch: new entry replaces:oldId + void old, reason "Sửa lại"), purgeEntries, ruleUsable; session.can backdate/purge; js/ui/draft.js (hand-over to Ghi điểm); js/views/add-date.js ("Ngày xảy ra"); js/views/purge.js ("Xoá tất cả đã thu hồi (n)", chunks of 20 via act()); Tổng kết admin button "Thêm điểm vào tuần này" (js/views/tongket/admin.js). Edit with "Hôm nay" stores at = now−2 min (rules need a past `at` when `replaces` is present). store.js is ~217 lines (over the soft limit; not split to keep risk low).
+- Sửa is blocked with a message if the entry's rule is inactive/missing (Thu hồi stays available).
+### Paper test of the new rules (m = member doc, role)
+| Case | validEntry / delete | Result |
+|---|---|---|
+| recorder normal (at==now, no extra keys, own tổ) | normal branch | OK |
+| teacher normal | normal branch | OK |
+| admin normal | normal branch | OK |
+| admin backdated 10d (addedAt==now, at=now−10d) | backdated branch | OK |
+| admin backdated 300d | at > now−200d false | DENIED |
+| admin future at | at < now false | DENIED |
+| recorder/teacher with addedAt | normal fails (key present), backdated needs role admin | DENIED |
+| admin backdated without addedAt | 'addedAt' in d false | DENIED |
+| admin/teacher delete void entry | isStaff && status=='void' | OK |
+| admin delete ok/pending entry | status != void | DENIED |
+| recorder/student/guest delete | not dev, not staff | DENIED |
+| admin batch: new entry (replaces) + void old | create backdated OK; update = validVoid (staff, ok/pending→void, only 3 keys) | OK |
+(dev bypasses validEntry and may delete anything, as before.)
 ## Done
 - Patch3 DONE (hardening): js/errors.js (window error/unhandledrejection -> toast "Có lỗi, thử lại", last 20 kept; shown + "Sao chép" in Công cụ dev → Công cụ & chẩn đoán); js/ui/act.js `act(fn,{btn,ok})` + `errMsg` (permission-denied/unavailable/resource-exhausted/default; app-thrown Vietnamese Errors pass through) used by ghi điểm, hoàn tác, xác nhận, đổi thứ tự thể lệ, join, Tôi buttons, dev export/backup; formSheet/confirmSheet/reasonSheet show errMsg (covers all admin/dev saves, thu hồi, tổng kết đợt, import). Defensive: config normalised (categories/titles/cycleWeeks defaults), deleted student -> "Học sinh đã xoá", entries keep own ruleName snapshot, view render errors -> friendly state with Tải lại. Validation: textInput maxlength 80, ghi chú/lý do 500, qty 1-99 clamp in store, saveDoc trims name(80)/note(500). Router: failed view import() -> "Tải lại" state (sw.js unchanged, network-first). Backup nudge (dev hub): js/backup.js, `aaba.backup` date, banner if never/>7 days.
 - Listener audit (Patch3): BEFORE every store.on() opened its own Firestore listener (home, feed, group, add, Tôi... each re-subscribed per visit; entries 'current' also opened a 2nd config listener). NOW store.on is a ref-counted hub keyed by collection(+cycle): one adapter listener per key, late subscribers get the cached value, last unsubscribe stops it; firebase adapter shares one config/main listener between the config view and entries-current. Guest openView watch goes through the same hub. Not browser/emulator-tested.
@@ -29,6 +58,8 @@
 - Local Firestore cache keeps class data on a shared device after sign-out; queued offline writes rejected later are dropped silently.
 - No App Check/rate limits: open anonymous sign-up can burn the free read quota (availability only).
 ## Terms (authoritative for all future UI copy)
+- WEEK MODEL (v3, supersedes the Cycle line below): Tuần = Thứ Bảy 00:00 → hết Thứ Sáu (giờ VN, UTC+7); label "T7 17/10 → T6 23/10"; điểm tính lại từ Điểm khởi đầu mỗi tuần; tuần thuộc tháng của ngày thứ Sáu. Tổng kết = trang #/tongket (Tuần | Tháng | 3 tháng), Tổng kết tuần trước (home). Trình chiếu = reserved name for a future present/slideshow mode of Tổng kết (not built). Nhật ký keeps its name.
+- DEPRECATED: Đợt/đợt, Tổng kết đợt (no UI copy; data fields stay dormant).
 - Nav/screens: Nhật ký (was Lịch sử) · Ghi điểm (nav, was Ghi) · Thể lệ (was Luật) · Hoạt động gần đây (was Mới nhất)
 - Cycle: Đợt/đợt (was Vòng) · Tổng kết đợt (was Chốt vòng; confirm: kết thúc đợt này, lưu bảng xếp hạng, bắt đầu đợt mới, tính lại điểm)
 - Access: Mã đăng nhập (was Thẻ mời) · Mã chung của lớp (was QR chung)
@@ -37,6 +68,7 @@
 - Void: Thu hồi điểm (was Huỷ) · Lý do thu hồi · voided = "Đã thu hồi"
 - Score: Điểm khởi đầu (was Điểm nền/gốc) · Điểm cá nhân. Roles: Ban cán sự, Tổ trưởng, Giáo viên, Học sinh, Quản trị.
 - QR removed; invites = typed code only (shown 5-5-5-5, copy raw 20 chars; #/join/:code still works but is never advertised).
+- Xoá hẳn = xoá vĩnh viễn một dòng ĐÃ THU HỒI (không khôi phục; điểm không đổi). Bổ sung = dòng admin ghi cho ngày đã qua (có addedAt, tag "Bổ sung", "Ghi lúc … bởi …"). Bản sửa = dòng thay thế khi Sửa (có replaces; dòng cũ thu hồi với lý do "Sửa lại"). Ngày xảy ra = ngày của điểm khi ghi bù.
 - Keep: Tổ, Chức vụ, Hoàn tác, Ghi tiếp, Quản lý, Công cụ dev, Nội quy/Học tập/Phong trào, seed rule names, "Dán luật bảo mật" (Firestore rules).
 - Helper texts: Đợt (admin), Điểm khởi đầu (settings), Chờ xác nhận (Cần xác nhận page). Code ids/routes/fields unchanged.
 ## Design v2 log

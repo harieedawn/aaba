@@ -1,1 +1,2 @@
+js/views/admin/cycle.js
 js/views/admin/duty.js
