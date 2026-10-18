@@ -1,10 +1,11 @@
-// Tổ detail: breakdown per category, members with personal net points, this vòng's entries.
+// Tổ detail: breakdown per category, members with personal net points, this đợt's entries.
 import { h } from '../ui/dom.js';
 import { rankGroups, personalPoints } from '../scoring.js';
 import { fmtNum, fmtPts } from '../format.js';
-import { dot, chip, emptyState, pageHeader, live, entryRow, entrySheet } from '../ui/components.js';
-import { stagger } from '../ui/anim.js';
+import { emptyState, pageHeader, live, entryRow, entrySheet } from '../ui/components.js';
+import { stagger, setBar } from '../ui/anim.js';
 
+const amt = n => h('span', { class: 'amt ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '') }, fmtPts(n));
 const sum = a => a.reduce((t, e) => t + e.points, 0);
 
 export default function group({ params }) {
@@ -23,23 +24,26 @@ export default function group({ params }) {
     const recent = [...mine].sort((a, b) => b.at - a.at);
     const open = e => entrySheet(e, { group: g, student: sm.get(e.studentId) });
     const out = [
-      pageHeader(g.name, { back: '#/', sub: `Hạng ${r.rank} trong lớp` }),
-      h('section', { class: `card g-${g.color}` },
-        h('div', { class: 'g-head' }, dot(g.color), h('div', { class: 'g-total' }, fmtNum(r.total)), h('span', { class: 'muted' }, 'điểm')),
-        h('div', { class: 'g-stats' }, chip(`${fmtPts(r.plus)} cộng`, 'pos'), chip(`${fmtPts(r.minus)} trừ`, 'neg'), r.pending ? chip(`${fmtPts(r.pending)} chờ duyệt`, 'warn') : null)),
-      h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Theo mảng')),
+      pageHeader(g.name, { back: '#/', sub: 'Điểm đợt này' }),
+      h('section', { class: `card g-hero g-${g.color}` },
+        h('div', { class: 'hero-rank' }, `Hạng ${r.rank}`),
+        h('div', { class: 'g-total' }, fmtNum(r.total)),
+        h('div', { class: 'hero-today' }, `${fmtPts(r.plus)} cộng · ${fmtPts(r.minus)} trừ${r.pending ? ` · ${fmtPts(r.pending)} chờ xác nhận` : ''}`)),
+      h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Theo nhóm')),
         cats.map(c => {
-          const es = ok.filter(e => e.cat === c.id);
-          return h('div', { class: 'cat-row' }, h('div', null, h('div', { class: 'cat-name' }, c.name),
-            h('div', { class: 'cat-sub muted' }, `Gốc ${c.base}`, chip(fmtPts(sum(es.filter(e => e.points > 0))), 'pos'), chip(fmtPts(sum(es.filter(e => e.points < 0))), 'neg'))),
-            h('div', { class: 'cat-val' }, fmtNum(r.byCat[c.id])));
+          const es = ok.filter(e => e.cat === c.id), bar = h('div', { class: 'fill' });
+          const mx = Math.max(1, ...cats.map(k => r.byCat[k.id]));
+          queueMicrotask(() => setBar(bar, Math.max(0, r.byCat[c.id]) / mx));
+          return h('div', { class: `cat-row g-${g.color}` }, h('div', null, h('div', { class: 'cat-name' }, c.name),
+            h('div', { class: 'cat-sub muted' }, `Điểm khởi đầu ${c.base} · ${fmtPts(sum(es.filter(e => e.points > 0)))} · ${fmtPts(sum(es.filter(e => e.points < 0)))}`)),
+            h('div', { class: 'cat-val' }, fmtNum(r.byCat[c.id])), h('div', { class: 'track', style: { gridColumn: '1 / -1' } }, bar));
         })),
       h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Thành viên')),
         members.length ? members.map(({ s, pts }) => h('div', { class: 'mem' },
           h('div', { class: 'mem-name' }, h('div', null, s.name), s.titleId && titles.get(s.titleId) && h('div', { class: 'mem-title muted' }, titles.get(s.titleId))),
-          chip(fmtPts(pts), pts > 0 ? 'pos' : pts < 0 ? 'neg' : '')))
+          amt(pts)))
           : emptyState({ icon: 'user', title: 'Chưa có thành viên' })),
-      h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Điểm trong vòng này')),
+      h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Điểm trong đợt này')),
         recent.length ? recent.map(e => entryRow(e, { group: g, student: sm.get(e.studentId), onOpen: open }))
           : emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm của tổ sẽ hiện ở đây.' })),
     ];

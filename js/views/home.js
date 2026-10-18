@@ -1,11 +1,11 @@
-// Home: header, leaderboard (FLIP / count-up / bar grow / stagger), duty chip, "Mới nhất".
+// Home: header, leaderboard (FLIP / count-up / bar grow / stagger), duty chip, "Hoạt động gần đây".
 import { h } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { rankGroups, deltaSince } from '../scoring.js';
 import { fmtNum, fmtPts, cycleInfo, startOfDay, weekKey } from '../format.js';
-import { logo, chip, dot, themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
-import { countUp, flip, stagger, setBar, floatDelta } from '../ui/anim.js';
-import { getSession } from '../session.js';
+import { themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
+import { countUp, flip, stagger, floatDelta } from '../ui/anim.js';
+import { getSession, can, role } from '../session.js';
 
 const memo = new Map(); let memoOrder = ''; // last shown values: remount animates from them
 const COLS = ['config', 'groups', 'students', 'entries', 'cycles', 'duty'];
@@ -15,109 +15,111 @@ function makeCard(cats, id) {
   c.rank = h('span', { class: 'rank' });
   c.name = h('span', { class: 'lb-name' });
   c.mine = h('span', { class: 'tag', hidden: true }, 'Tổ của bạn');
-  c.pend = chip('', 'warn');
-  c.dot = h('span');
+  c.tile = h('span', { class: 'tile' });
   c.total = h('span', { class: 'lb-total' }, '0');
-  c.delta = chip('', '');
-  c.bars = cats.map(() => h('div', { class: 'fill' }));
-  c.vals = cats.map(() => h('span', { class: 'lb-bar-v' }));
+  c.today = h('div', { class: 'hero-today' });
+  c.sub = h('div', { class: 'lb-sub' });
+  c.pend = h('span');
+  c.el = h('a', { class: 'lb-row pressable' });
   const m = memo.get(id);
-  if (m) {
-    c.v = m.v; c.d = m.d; c.total._v = m.v; c.total.textContent = fmtNum(m.v); c.dot.className = 'dot';
-    c.bars.forEach((b, i) => { b._f = m.f[i] ?? 0; b.style.transform = `scaleX(${b._f})`; });
-  }
-  c.el = h('a', { class: 'lb-card pressable' },
-    h('div', { class: 'lb-top' }, c.rank,
-      h('div', { class: 'lb-id' }, h('div', { class: 'lb-name-row' }, c.dot, c.name, c.mine), c.pend),
-      h('div', { class: 'lb-score' }, c.total, c.delta)),
-    h('div', { class: 'lb-bars' }, cats.map((k, i) => h('div', { class: 'lb-bar' },
-      h('div', { class: 'lb-bar-h' }, h('span', { class: 'muted' }, k.name), c.vals[i]),
-      h('div', { class: 'track' }, c.bars[i])))));
+  if (m) { c.v = m.v; c.d = m.d; c.total._v = m.v; c.total.textContent = fmtNum(m.v); c.fresh = false; } else c.fresh = true;
   return c;
 }
 
 export default function home() {
   const S = {}, cards = new Map();
   let order = '', done = false, latestDone = false;
-  const sub = h('p', { class: 'hdr-sub muted' });
-  const duty = h('div', { class: 'duty' });
-  const board = h('div', { class: 'lb' }, skeletonCards(4));
+  const hello = h('h1', { class: 'hello' }), lead = h('p', { class: 'lead' });
+  const wk = h('div', { class: 'weekbar', 'aria-hidden': 'true' }), wkT = h('div', { class: 'wk-t' });
+  const hero = h('div'), board = h('div', { class: 'lb' }, skeletonCards(4));
+  const side = h('div', { class: 'side-stack side' });
   const latest = h('div', { class: 'entries' });
   const el = h('div', { class: 'view home' },
-    h('header', { class: 'hdr' },
-      h('div', { class: 'hdr-main' }, logo(), h('h1', { class: 'hdr-title sr' }, 'Xếp hạng'), sub), themeToggle()),
-    duty,
+    h('header', { class: 'hdr' }, h('div', { class: 'hdr-main' }, hello, lead), themeToggle()),
+    h('div', { class: 'hdr-prog' }, wk, wkT),
     h('div', { class: 'home-grid' },
       h('section', { 'aria-label': 'Bảng xếp hạng' }, board),
-      h('aside', { class: 'card side' },
-        h('div', { class: 'side-head' }, h('h2', null, 'Mới nhất'), h('a', { class: 'link', href: '#/lichsu' }, 'Xem tất cả')), latest)));
+      side));
 
-  function paint(c, r, cats, maxCat, mine, since) {
-    const fresh = !c.dot.className;
-    c.el.className = `lb-card pressable g-${r.group.color}${r.rank <= 3 ? ' top' : ''}${r.group.id === mine ? ' mine' : ''}`;
-    c.el.href = '#/to/' + r.group.id;
-    c.el.setAttribute('aria-label', `Hạng ${r.rank}, ${r.group.name}, ${fmtNum(r.total)} điểm`);
-    c.dot.className = 'dot';
+  function paint(c, r, cats, mine, since) {
+    const top = r.rank === 1, g = r.group;
+    c.el.className = (top ? `lb-hero pressable g-${g.color}` : `lb-row pressable g-${g.color}`) + (g.id === mine ? ' mine' : '');
+    c.el.href = '#/to/' + g.id;
+    c.el.setAttribute('aria-label', `Hạng ${r.rank}, ${g.name}, ${fmtNum(r.total)} điểm`);
     c.rank.textContent = r.rank;
-    c.name.textContent = r.group.name;
-    c.mine.hidden = r.group.id !== mine;
+    c.tile.textContent = (g.name.match(/\d+/) || [g.name[0]])[0];
+    c.name.textContent = g.name;
+    c.mine.hidden = g.id !== mine;
+    c.total.className = top ? 'hero-score' : 'lb-total';
     countUp(c.total, r.total);
-    const d = deltaSince(r.group.id, S.entries, since);
-    c.delta.hidden = d === 0;
-    c.delta.textContent = fmtPts(d);
-    c.delta.className = 'chip ' + (d > 0 ? 'pos' : 'neg');
-    if (!fresh && d !== c.d) floatDelta(c.delta, fmtPts(d - c.d), d - c.d > 0 ? 'pos' : 'neg');
-    c.d = d;
-    c.pend.hidden = !r.pending;
-    c.pend.textContent = `${fmtPts(r.pending)} chờ duyệt`;
-    cats.forEach((k, i) => {
-      c.vals[i].textContent = fmtNum(r.byCat[k.id]);
-      setBar(c.bars[i], Math.max(0, r.byCat[k.id]) / maxCat[k.id], 80 * i);
-    });
-    memo.set(r.group.id, { v: r.total, d, f: c.bars.map(b => b._f) });
+    const d = deltaSince(g.id, S.entries, since);
+    c.today.textContent = d ? `${fmtPts(d)} hôm nay` : 'Chưa có điểm hôm nay';
+    c.sub.textContent = cats.map(k => `${k.name} ${fmtNum(r.byCat[k.id])}`).join(' · ');
+    if (!c.fresh && d !== c.d) floatDelta(c.total, fmtPts(d - c.d), d - c.d > 0 ? 'pos' : 'neg');
+    c.fresh = false; c.d = d;
+    const rankLab = h('div', { class: 'hero-rank' }, 'Dẫn đầu');
+    if (top) c.el.replaceChildren(rankLab, h('div', { class: 'hero-name' }, c.name, c.mine), c.total, c.today);
+    else c.el.replaceChildren(c.rank, c.tile, h('div', { class: 'lb-id' }, h('div', { class: 'lb-name-row' }, c.name, c.mine), c.sub), h('div', { class: 'lb-score' }, c.total));
+    memo.set(g.id, { v: r.total, d });
   }
 
   function renderBoard(cats) {
     const ranked = rankGroups(S.groups, S.entries, cats, S.config.currentCycleId);
-    const maxCat = {};
-    cats.forEach(k => { maxCat[k.id] = Math.max(1, ...ranked.map(r => r.byCat[k.id])); });
     const since = startOfDay(Date.now()), mine = getSession()?.groupId;
     if (!done) board.replaceChildren();
     const next = ranked.map(r => {
       let c = cards.get(r.group.id);
       if (!c) cards.set(r.group.id, (c = makeCard(cats, r.group.id)));
-      paint(c, r, cats, maxCat, mine, since);
+      paint(c, r, cats, mine, since);
       return c;
     });
     next.forEach((c, i) => { c.id = ranked[i].group.id; });
     for (const [id, c] of cards) if (!ranked.some(r => r.group.id === id)) { c.el.remove(); cards.delete(id); }
     const key = ranked.map(r => r.group.id).join();
     const apply = () => next.forEach(c => board.append(c.el));
-    if (!done && memoOrder) { // remount: start in the previously shown order, then FLIP to the new one
+    if (!done && memoOrder) {
       const prev = memoOrder.split(',');
       [...next].sort((a, b) => prev.indexOf(a.id) - prev.indexOf(b.id)).forEach(c => board.append(c.el));
       key !== memoOrder ? flip(board, apply) : apply();
     } else done && key !== order ? flip(board, apply) : apply();
     if (!done) { if (!memoOrder) stagger(board.children); done = true; }
     order = memoOrder = key;
+    return ranked;
   }
 
-  function renderLatest() {
-    const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(s => [s.id, s]));
+  function renderSide(ranked) {
+    const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(x => [x.id, x]));
     const rows = S.entries.filter(e => e.status !== 'void').sort((a, b) => b.at - a.at).slice(0, 5)
       .map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId) }));
     latest.replaceChildren(...(rows.length ? rows : [emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm mới sẽ hiện ở đây.' })]));
     if (!latestDone && rows.length) { stagger(latest.children); latestDone = true; }
+    const dg = gm.get(S.duty.find(d => d.id === weekKey(Date.now()))?.groupId);
+    const pend = S.entries.filter(e => e.status === 'pending');
+    const myPend = pend.filter(e => e.groupId === getSession()?.groupId).length;
+    const cards = [];
+    if (dg) cards.push(h('section', { class: 'card duty-card g-' + dg.color }, h('span', { class: 'tile' }, (dg.name.match(/\d+/) || [dg.name[0]])[0]),
+      h('div', null, h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Tổ trực tuần này'), h('b', null, dg.name))));
+    if (can('approve')) cards.push(h('section', { class: 'card need' }, h('div', null, h('b', null, 'Cần xác nhận'), h('div', { class: 'muted' }, pend.length ? `${pend.length} điểm đang chờ` : 'Không có điểm nào đang chờ')),
+      h('a', { class: 'btn pressable', href: '#/duyet' }, 'Xem')));
+    else if (role() === 'recorder' && myPend) cards.push(h('section', { class: 'card' }, h('b', null, `${myPend} điểm đang chờ xác nhận`)));
+    cards.push(h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Hoạt động gần đây'), h('a', { class: 'link', href: '#/lichsu' }, 'Xem tất cả')), latest));
+    side.replaceChildren(...cards);
   }
 
   function update() {
     if (!COLS.every(k => S[k] !== undefined)) return;
+    const ss = getSession(), first = (ss?.name || '').trim().split(/\s+/).pop();
+    hello.textContent = first ? `Chào ${first}` : 'Chào bạn';
     const info = cycleInfo(S.cycles.find(c => c.id === S.config.currentCycleId), S.config.cycleWeeks);
-    sub.textContent = info ? `Vòng ${info.n} · tuần ${info.week}/${info.weeks} · còn ${info.daysLeft} ngày` : '';
-    const dg = S.groups.find(g => g.id === S.duty.find(d => d.id === weekKey(Date.now()))?.groupId);
-    duty.replaceChildren(...(dg ? [chip([dot(dg.color), `Tổ trực tuần này: ${dg.name}`], 'duty-chip')] : []));
-    renderBoard(S.config.categories);
-    renderLatest();
+    wkT.textContent = info ? `Đợt ${info.n} · tuần ${info.week}/${info.weeks} · còn ${info.daysLeft} ngày` : '';
+    wk.replaceChildren(...(info ? Array.from({ length: info.weeks }, (_, i) => h('i', { class: i < info.week ? 'on' : '' })) : []));
+    const ranked = renderBoard(S.config.categories);
+    const [a, b] = ranked;
+    lead.textContent = !a || !S.entries.length ? 'Chưa có điểm nào trong đợt này.'
+      : !b ? `${a.group.name} đang dẫn đầu.`
+      : a.total === b.total ? `${a.group.name} và ${b.group.name} đang bằng điểm.`
+      : `${a.group.name} đang dẫn đầu, hơn ${b.group.name} ${fmtNum(a.total - b.total)} điểm.`;
+    renderSide(ranked);
   }
   const subs = COLS.map(c => store.on(c, v => { S[c] = v; update(); }));
   return { el, destroy: () => subs.forEach(u => u()) };

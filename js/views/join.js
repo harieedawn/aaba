@@ -1,8 +1,8 @@
-// Tham gia bằng thẻ mời: link/QR/nhập mã -> (học sinh chọn tên, chỉ một lần) -> trang chủ.
+// Tham gia bằng mã đăng nhập: link/QR/nhập mã -> (học sinh chọn tên, chỉ một lần) -> trang chủ.
 import { h } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { BACKEND } from '../config.js';
-import { logo, chip, dot, themeToggle } from '../ui/components.js';
+import { logo, dot, themeToggle } from '../ui/components.js';
 import { getSession } from '../session.js';
 import { navigate } from '../router.js';
 import { toast } from '../ui/toast.js';
@@ -22,7 +22,7 @@ export default function join({ params }) {
   function showForm(code = '', err = '') {
     const input = h('input', { class: 'input', value: code, placeholder: 'Nhập mã 20 ký tự', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': 'Mã tham gia', maxlength: '120' });
     const errEl = h('div', { class: 'form-err', role: 'alert', hidden: !err }, err);
-    const btn = h('button', { class: 'btn', type: 'button' }, 'Tham gia');
+    const btn = h('button', { class: 'btn btn-accent', type: 'button' }, 'Tham gia');
     const go = async raw => {
       const c = clean(raw ?? input.value);
       if (!c) { errEl.hidden = false; errEl.textContent = ERR.empty; return; }
@@ -39,9 +39,10 @@ export default function join({ params }) {
     const s = getSession();
     root.replaceChildren(
       h('div', { class: 'sec-h' }, logo(), themeToggle()),
-      h('h1', null, 'Tham gia lớp'),
-      h('p', { class: 'muted', style: { margin: '8px 0 20px' } }, 'Quét mã QR bằng camera điện thoại, hoặc nhập mã 20 ký tự thầy cô đưa.'),
-      h('div', { class: 'form' }, input, errEl, btn),
+      h('section', { class: 'card stack' },
+        h('h1', null, 'Chào mừng đến aaba'),
+        h('p', { class: 'muted' }, 'Quét mã QR bằng camera điện thoại, hoặc nhập mã 20 ký tự thầy cô đưa.'),
+        h('div', { class: 'form' }, input, errEl, btn)),
       BACKEND === 'local' ? (demoBox = h('div')) : null,
       s && !needName() ? h('p', { class: 'muted', style: { marginTop: '24px', fontSize: '13px' } }, `Đang dùng: ${s.name}.`, ' ', h('a', { class: 'link', href: '#/' }, 'Về xếp hạng')) : null);
     paintDemo(input, go);
