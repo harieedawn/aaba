@@ -19,5 +19,8 @@
 - [ ] Vào bằng mã **tổ trưởng**: không ghi được cho tổ khác; điểm cộng vào trạng thái *chờ xác nhận* và không tự xác nhận được điểm của chính mình.
 - [ ] Vào bằng mã **Ban cán sự (admin)**: không tạo được mã đăng nhập *admin* hoặc *dev*, và không thấy mã dev trong danh sách.
 - [ ] **Thu hồi** một mã đăng nhập trong app → máy dùng mã đó bị đưa về màn hình tham gia và không đọc được dữ liệu nữa.
+- [ ] **Xem không cần mã**: sau khi Publish lại `firestore.rules`, vào Quản lý → Cài đặt, bật "Cho phép xem không cần mã" rồi Lưu. Mở link trong cửa sổ ẩn danh: khách xem được xếp hạng, nhật ký, thể lệ, nhưng không có Ghi điểm / Quản lý / Xác nhận và không ghi được gì.
+- [ ] Khách **không đọc được** `members` và `invites` (không thấy mã đăng nhập ở bất kỳ đâu).
+- [ ] Tắt "Cho phép xem không cần mã" → khách bị đưa về màn hình tham gia và không đọc được dữ liệu nữa (thành viên có mã vẫn dùng bình thường).
 
 Sự cố thường gặp: "Chưa điền FIREBASE_CONFIG" → làm lại bước 4. "Không có quyền" khi tham gia → kiểm tra mã đúng 20 ký tự, mã còn `active: true`, và đã Publish luật (bước 5). Đăng nhập lỗi `auth/unauthorized-domain` → làm lại bước 9.

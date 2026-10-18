@@ -1,5 +1,11 @@
+**TODO (bắt buộc): Re-publish firestore.rules in the Firebase console (Firestore → Rules → Publish)**
+
 # aaba — PROGRESS
 ## Done
+- Step3 DONE: SETUP.md guest checklist (vi).
+- Step2 DONE (open view): config.openView (seed/setup wizard = true; existing docs without the field = OFF, rules need explicit true -> admin enables toggle in Quản lý → Cài đặt). Guest = anon user without members doc while openView===true; role 'guest' ("Khách"), can() only 'view'. Firebase init reads config/main to form guest; store.guestInit watches config and drops to #/join if openView off/denied. Local adapter: ?role=guest. firestore.rules: openView() on config/groups/students/rules/cycles/duty/entries reads; members/invites untouched.
+- Tôi for guests: name picker (localStorage aaba.me, no Firestore), "Đổi tên", link #/join; join screen has "Xem mà không cần mã" for guests. Notifications: js/notify.js (entries about me, by!=me, newer than localStorage aaba.seen; first run seeds seen to newest), bell in home header + red dot on Tôi tab, "Thông báo" list in Tôi (marks seen), js/views/me-parts.js. Status changes of old entries (pending->ok/void) do not re-notify.
+- Fix1 DONE: ui/dom.js `put(el, ...kids)` (flatten, skip null/undefined/false, strings->text); all replaceChildren calls now use put (fixes literal "null"). Remaining .append calls only get real nodes.
 - P1 shell/css/PWA/session/scoring/store+local adapter/seed/ui; home. P2 group, feed, rules, me, join. P3 add, review, void, closeCycle.
 - P4 admin (groups, roster+bulk paste, rules, titles, duty, invites+QR, cycle, settings) and dev (setup wizard, export/import, role preview, font check, diagnostics). Node smoke + ban-list grep passed.
 - P5 step 1: js/data/adapter.firebase.js (SDK 10.14.1 via gstatic dynamic import, anon auth, persistentLocalCache multi-tab, realtime watch, offline writes queued). store.js unchanged in logic (adapter exposes get/list/set/remove/watch/uid/remember/signOut). config.js: BACKEND='local' + FIREBASE_CONFIG placeholder block.
