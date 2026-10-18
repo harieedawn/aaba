@@ -1,4 +1,4 @@
-// Tham gia bằng mã đăng nhập: link/QR/nhập mã -> (học sinh chọn tên, chỉ một lần) -> trang chủ.
+// Tham gia bằng mã đăng nhập: nhập mã -> (học sinh chọn tên, chỉ một lần) -> trang chủ.
 import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { BACKEND } from '../config.js';
@@ -12,7 +12,7 @@ const ERR = {
   bad: 'Mã không hợp lệ hoặc đã bị thu hồi. Kiểm tra lại mã hoặc hỏi người đã gửi cho bạn.',
   net: 'Không kết nối được. Kiểm tra mạng rồi thử lại.',
 };
-const clean = v => { const m = String(v).trim().match(/join\/([^/?#\s]+)/); return (m ? m[1] : String(v)).replace(/\s+/g, ''); };
+const clean = v => { const m = String(v).trim().match(/join\/([^/?#\s]+)/); return (m ? m[1] : String(v)).replace(/[\s-]+/g, ''); };
 
 export default function join({ params }) {
   const root = h('div', { class: 'join' });
@@ -42,7 +42,7 @@ export default function join({ params }) {
       s?.role === 'guest' && h('a', { class: 'link', href: '#/' }, 'Xem mà không cần mã'),
       h('section', { class: 'card stack' },
         h('h1', null, 'Chào mừng đến aaba'),
-        h('p', { class: 'muted' }, 'Quét mã QR bằng camera điện thoại, hoặc nhập mã 20 ký tự thầy cô đưa.'),
+        h('p', { class: 'muted' }, 'Nhập mã 20 ký tự thầy cô hoặc ban cán sự đưa.'),
         h('div', { class: 'form' }, input, errEl, btn)),
       BACKEND === 'local' ? (demoBox = h('div')) : null,
       s && s.role !== 'guest' && !needName() ? h('p', { class: 'muted', style: { marginTop: '24px', fontSize: '13px' } }, `Đang dùng: ${s.name}.`, ' ', h('a', { class: 'link', href: '#/' }, 'Về xếp hạng')) : null);
