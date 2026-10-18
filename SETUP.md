@@ -11,15 +11,15 @@
 8. **Đẩy lên GitHub**: tạo repo, đẩy toàn bộ thư mục (có file `.nojekyll`) lên nhánh `dev`. Vào *Settings → Pages → Build and deployment → Deploy from a branch → `dev` / `(root)` → Save*. Chờ 1–2 phút, trang sẽ ở `https://<user>.github.io/<repo>/`.
 9. **Cho phép tên miền**: Firebase *Authentication → Settings → Authorized domains → Add domain* → `<user>.github.io`.
 10. **Vào bằng điện thoại**: mở `https://<user>.github.io/<repo>/#/join/<mã 20 ký tự ở bước 6>` (hoặc mở trang rồi nhập mã). Bạn trở thành **Quản trị (dev)**.
-11. **Thay mã khởi tạo**: trong app, *Tôi → Quản lý → Mã đăng nhập & QR* → tạo một mã đăng nhập **dev** mới và cất mã ở nơi an toàn. Sau đó vào Firebase console, sửa tay mã khởi tạo: `active` = `false`. (Đừng bấm "Thu hồi" trong app với mã khởi tạo: app sẽ xoá luôn tài khoản của bạn.)
-12. **Chạy trình cài đặt**: *Tôi → Công cụ dev* (tự mở trình cài đặt khi lớp còn trống, hoặc chọn *Thiết lập lớp từ đầu*) → nhập tên lớp, các tổ, danh sách học sinh → hoàn tất. Sau đó tạo mã đăng nhập (QR) cho tổ trưởng, giáo viên và "Mã chung của lớp" cho học sinh.
+11. **Thay mã khởi tạo**: trong app, *Tôi → Quản lý → Mã đăng nhập* → tạo một mã đăng nhập **dev** mới và cất mã ở nơi an toàn. Sau đó vào Firebase console, sửa tay mã khởi tạo: `active` = `false`. (Đừng bấm "Thu hồi" trong app với mã khởi tạo: app sẽ xoá luôn tài khoản của bạn.)
+12. **Chạy trình cài đặt**: *Tôi → Công cụ dev* (tự mở trình cài đặt khi lớp còn trống, hoặc chọn *Thiết lập lớp từ đầu*) → nhập tên lớp, các tổ, danh sách học sinh → hoàn tất. Sau đó tạo mã đăng nhập cho tổ trưởng, giáo viên và "Mã chung của lớp" cho học sinh, rồi gửi mã cho từng người.
 
 ## Kiểm tra bảo mật thủ công (làm 1 lần sau khi chạy)
 - [ ] Vào bằng mã **học sinh**: không có nút Ghi; thử ghi điểm bằng bất kỳ cách nào đều bị từ chối.
 - [ ] Vào bằng mã **tổ trưởng**: không ghi được cho tổ khác; điểm cộng vào trạng thái *chờ xác nhận* và không tự xác nhận được điểm của chính mình.
 - [ ] Vào bằng mã **Ban cán sự (admin)**: không tạo được mã đăng nhập *admin* hoặc *dev*, và không thấy mã dev trong danh sách.
 - [ ] **Thu hồi** một mã đăng nhập trong app → máy dùng mã đó bị đưa về màn hình tham gia và không đọc được dữ liệu nữa.
-- [ ] **Xem không cần mã**: sau khi Publish lại `firestore.rules`, vào Quản lý → Cài đặt, bật "Cho phép xem không cần mã" rồi Lưu. Mở link trong cửa sổ ẩn danh: khách xem được xếp hạng, nhật ký, thể lệ, nhưng không có Ghi điểm / Quản lý / Xác nhận và không ghi được gì.
+- [ ] **Xem không cần mã**: sau khi Publish lại `firestore.rules`, vào Quản lý → Cài đặt, bật "Cho phép xem không cần mã" rồi Lưu. Mở trang web trong cửa sổ ẩn danh: khách xem được xếp hạng, nhật ký, thể lệ, nhưng không có Ghi điểm / Quản lý / Xác nhận và không ghi được gì.
 - [ ] Khách **không đọc được** `members` và `invites` (không thấy mã đăng nhập ở bất kỳ đâu).
 - [ ] Tắt "Cho phép xem không cần mã" → khách bị đưa về màn hình tham gia và không đọc được dữ liệu nữa (thành viên có mã vẫn dùng bình thường).
 

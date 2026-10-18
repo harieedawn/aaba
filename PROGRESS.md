@@ -32,6 +32,7 @@
 - Add flow: Thường dùng · Nhóm (was Mảng) · Nội dung (was Mục, item picker). Admin rules: Thể lệ, "Thêm tiêu chí"
 - Void: Thu hồi điểm (was Huỷ) · Lý do thu hồi · voided = "Đã thu hồi"
 - Score: Điểm khởi đầu (was Điểm nền/gốc) · Điểm cá nhân. Roles: Ban cán sự, Tổ trưởng, Giáo viên, Học sinh, Quản trị.
+- QR removed; invites = typed code only (shown 5-5-5-5, copy raw 20 chars; #/join/:code still works but is never advertised).
 - Keep: Tổ, Tổ trực, Chức vụ, Hoàn tác, Ghi tiếp, Quản lý, Công cụ dev, Nội quy/Học tập/Phong trào, seed rule names, "xoay vòng" (duty rotation), "Dán luật bảo mật" (Firestore rules).
 - Helper texts: Đợt (admin), Điểm khởi đầu (settings), Chờ xác nhận (Cần xác nhận page). Code ids/routes/fields unchanged.
 ## Design v2 log
