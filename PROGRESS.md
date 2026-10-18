@@ -2,12 +2,16 @@
 
 # aaba — PROGRESS
 ## Done
+- Patch3 DONE (hardening): js/errors.js (window error/unhandledrejection -> toast "Có lỗi, thử lại", last 20 kept; shown + "Sao chép" in Công cụ dev → Công cụ & chẩn đoán); js/ui/act.js `act(fn,{btn,ok})` + `errMsg` (permission-denied/unavailable/resource-exhausted/default; app-thrown Vietnamese Errors pass through) used by ghi điểm, hoàn tác, xác nhận, đổi thứ tự thể lệ, join, Tôi buttons, dev export/backup; formSheet/confirmSheet/reasonSheet show errMsg (covers all admin/dev saves, thu hồi, tổng kết đợt, import). Defensive: config normalised (categories/titles/cycleWeeks defaults), deleted student -> "Học sinh đã xoá", entries keep own ruleName snapshot, view render errors -> friendly state with Tải lại. Validation: textInput maxlength 80, ghi chú/lý do 500, qty 1-99 clamp in store, saveDoc trims name(80)/note(500). Router: failed view import() -> "Tải lại" state (sw.js unchanged, network-first). Backup nudge (dev hub): js/backup.js, `aaba.backup` date, banner if never/>7 days.
+- Listener audit (Patch3): BEFORE every store.on() opened its own Firestore listener (home, feed, group, add, Tôi... each re-subscribed per visit; entries 'current' also opened a 2nd config listener). NOW store.on is a ref-counted hub keyed by collection(+cycle): one adapter listener per key, late subscribers get the cached value, last unsubscribe stops it; firebase adapter shares one config/main listener between the config view and entries-current. Guest openView watch goes through the same hub. Not browser/emulator-tested.
+- Patch2 DONE: students.titleIds (array; missing -> [titleId]); titleId mirrors the highest-role title (js/titles.js: titleIdsOf/titleNames/topTitle/roleRank) so members/invites/rules unchanged. Student form = multi-select chips; names joined " · " in roster, group page, Tôi, invite list. Invite suggested role = highest role among the person's titles that the issuer may create (admin issuer can't issue admin -> falls back to next highest); groupId kept.
+- Patch1 DONE: Lịch trực nhật removed everywhere (admin section, home card, add.js, collection/adapters/seed/setup/export; import ignores `duty` key; rule `duty` flag ignored). Student `active` checkbox/filters removed (field may stay; missing/false = active). firestore.rules untouched (its /duty match is now unused).
 - Step3 DONE: SETUP.md guest checklist (vi).
 - Step2 DONE (open view): config.openView (seed/setup wizard = true; existing docs without the field = OFF, rules need explicit true -> admin enables toggle in Quản lý → Cài đặt). Guest = anon user without members doc while openView===true; role 'guest' ("Khách"), can() only 'view'. Firebase init reads config/main to form guest; store.guestInit watches config and drops to #/join if openView off/denied. Local adapter: ?role=guest. firestore.rules: openView() on config/groups/students/rules/cycles/duty/entries reads; members/invites untouched.
 - Tôi for guests: name picker (localStorage aaba.me, no Firestore), "Đổi tên", link #/join; join screen has "Xem mà không cần mã" for guests. Notifications: js/notify.js (entries about me, by!=me, newer than localStorage aaba.seen; first run seeds seen to newest), bell in home header + red dot on Tôi tab, "Thông báo" list in Tôi (marks seen), js/views/me-parts.js. Status changes of old entries (pending->ok/void) do not re-notify.
 - Fix1 DONE: ui/dom.js `put(el, ...kids)` (flatten, skip null/undefined/false, strings->text); all replaceChildren calls now use put (fixes literal "null"). Remaining .append calls only get real nodes.
 - P1 shell/css/PWA/session/scoring/store+local adapter/seed/ui; home. P2 group, feed, rules, me, join. P3 add, review, void, closeCycle.
-- P4 admin (groups, roster+bulk paste, rules, titles, duty, invites+QR, cycle, settings) and dev (setup wizard, export/import, role preview, font check, diagnostics). Node smoke + ban-list grep passed.
+- P4 admin (groups, roster+bulk paste, rules, titles, invites+QR, cycle, settings) and dev (setup wizard, export/import, role preview, font check, diagnostics). Node smoke + ban-list grep passed.
 - P5 step 1: js/data/adapter.firebase.js (SDK 10.14.1 via gstatic dynamic import, anon auth, persistentLocalCache multi-tab, realtime watch, offline writes queued). store.js unchanged in logic (adapter exposes get/list/set/remove/watch/uid/remember/signOut). config.js: BACKEND='local' + FIREBASE_CONFIG placeholder block.
 - P5 DONE: step 2 firestore.rules; step 3 SETUP.md (vi, 12 steps + security checklist); step 4 rules reviewed line by line vs §7/§10 (+rule defaults via .get, rule.active checked). sw.js network-first, all paths relative, .nojekyll, manifest scope "./" confirmed.
 ## Decisions (P5)
@@ -19,7 +23,7 @@
 - Not browser-tested; firebase adapter and rules never run (no emulator). Test with SETUP.md checklist.
 ## Residual risks (rules)
 - Any leaked/QR-chung invite code grants its role until revoked (no expiry/use count); keep dev/admin codes private.
-- Duty-tổ restriction is client-only; recorder can post a duty rule for own tổ out of turn. Entry pending/ok rule is enforced.
+- Entry pending/ok rule is enforced by rules.
 - Two members may claim the same student name; no uniqueness check. Sign-out leaves an orphan member doc (no self-delete).
 - Dev bypasses entry validation (import/resets); a dev invite = full control.
 - Local Firestore cache keeps class data on a shared device after sign-out; queued offline writes rejected later are dropped silently.
@@ -33,7 +37,7 @@
 - Void: Thu hồi điểm (was Huỷ) · Lý do thu hồi · voided = "Đã thu hồi"
 - Score: Điểm khởi đầu (was Điểm nền/gốc) · Điểm cá nhân. Roles: Ban cán sự, Tổ trưởng, Giáo viên, Học sinh, Quản trị.
 - QR removed; invites = typed code only (shown 5-5-5-5, copy raw 20 chars; #/join/:code still works but is never advertised).
-- Keep: Tổ, Tổ trực, Chức vụ, Hoàn tác, Ghi tiếp, Quản lý, Công cụ dev, Nội quy/Học tập/Phong trào, seed rule names, "xoay vòng" (duty rotation), "Dán luật bảo mật" (Firestore rules).
+- Keep: Tổ, Chức vụ, Hoàn tác, Ghi tiếp, Quản lý, Công cụ dev, Nội quy/Học tập/Phong trào, seed rule names, "Dán luật bảo mật" (Firestore rules).
 - Helper texts: Đợt (admin), Điểm khởi đầu (settings), Chờ xác nhận (Cần xác nhận page). Code ids/routes/fields unchanged.
 ## Design v2 log
 - Step 1 DONE: tokens/base/layout/components CSS, light default theme (Sáng/Tối/Tự động in session.js + Me segmented control), manifest/theme-color. Components markup (step 2+) pending.
