@@ -1,0 +1,29 @@
+/* phase 4: admin + dev sections (flat, tokens only) */
+.field{display:grid;gap:var(--sp-1)}
+.field-l{font-size:var(--fs-13);font-weight:700;color:var(--text-2)}
+.field .hint{text-align:left;margin:0}
+select.input{appearance:auto}
+.check-row{display:flex;align-items:center;gap:var(--sp-3);min-height:44px}
+.check{width:22px;height:22px;accent-color:var(--primary)}
+.qr{background:#fff;border-radius:var(--r-m);border:1px solid var(--border);margin:0 auto;overflow:hidden}
+.qr-fallback{display:grid;gap:var(--sp-2);padding:var(--sp-3);word-break:break-all}
+.code-big{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--fs-17);font-weight:700;letter-spacing:.06em;text-align:center;word-break:break-all;padding:var(--sp-3);background:var(--surface-2);border-radius:var(--r-m);user-select:all}
+.arow{display:flex;align-items:center;gap:var(--sp-2);min-height:52px;padding:var(--sp-2) 0;border-bottom:1px solid var(--border)}
+.arow:last-child{border-bottom:0}
+.arow-main{flex:1;min-width:0}
+.arow-name{font-weight:500;overflow-wrap:anywhere}
+.arow-sub{font-size:var(--fs-13);color:var(--text-2)}
+.arow.is-off .arow-main{opacity:.55}
+.arow .icon-btn{flex:none}
+.up svg{transform:rotate(-90deg)}.down svg{transform:rotate(90deg)}
+.sec-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.sec-actions .btn{min-height:44px}
+.colors{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.colors button{width:44px;height:44px;border-radius:50%;border:2px solid transparent;background:var(--surface-2);display:grid;place-items:center}
+.colors button[aria-pressed=true]{border-color:var(--text)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--fs-13);overflow-wrap:anywhere}
+.steps{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-4)}
+.steps span{flex:1;height:4px;border-radius:var(--r-pill);background:var(--border)}
+.steps span.on{background:var(--primary)}
+.font-check{font-size:var(--fs-22);line-height:1.4}
+.is-dim{opacity:.3;pointer-events:none}
