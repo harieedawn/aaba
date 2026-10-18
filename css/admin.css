@@ -5,9 +5,7 @@
 select.input{appearance:auto}
 .check-row{display:flex;align-items:center;gap:var(--sp-3);min-height:44px}
 .check{width:22px;height:22px;accent-color:var(--primary)}
-.qr{background:#fff;border-radius:var(--r-m);border:1px solid var(--border);margin:0 auto;overflow:hidden}
-.qr-fallback{display:grid;gap:var(--sp-2);padding:var(--sp-3);word-break:break-all}
-.code-big{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--fs-17);font-weight:700;letter-spacing:.06em;text-align:center;word-break:break-all;padding:var(--sp-3);background:var(--surface-2);border-radius:var(--r-m);user-select:all}
+.code-big{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--fs-22);font-weight:700;letter-spacing:.08em;text-align:center;word-break:break-all;padding:var(--sp-3);background:var(--surface-2);border-radius:var(--r-m);user-select:all}
 .arow{display:flex;align-items:center;gap:var(--sp-2);min-height:52px;padding:var(--sp-2) 0;border-bottom:1px solid var(--border)}
 .arow:last-child{border-bottom:0}
 .arow-main{flex:1;min-width:0}
