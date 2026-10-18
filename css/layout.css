@@ -15,7 +15,7 @@
 .nav-item.ghi .ico{width:56px;height:56px;margin-top:-22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);border:4px solid var(--bg)}
 .badge{min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);background:var(--neg);color:#fff;font-size:var(--fs-12);font-weight:700;line-height:18px;text-align:center}
 .banner{position:fixed;z-index:60;top:0;left:0;right:0;padding:calc(var(--sp-2) + env(safe-area-inset-top)) var(--sp-4) var(--sp-2);background:var(--warn-tint);color:var(--warn-text);font-size:var(--fs-13);font-weight:500;text-align:center}
-.home-grid{display:grid;gap:var(--sp-6)}
+.home-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-6)}
 .hdr .logo{font-size:var(--fs-22)}
 @media (min-width:600px){
   .main{margin-left:88px;padding:env(safe-area-inset-top) var(--sp-8) var(--sp-8)}

@@ -1,5 +1,5 @@
 /* phase 4: admin + dev sections (flat, tokens only) */
-.field{display:grid;gap:var(--sp-1)}
+.field{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-1)}
 .field-l{font-size:var(--fs-13);font-weight:700;color:var(--text-2)}
 .field .hint{text-align:left;margin:0}
 select.input{appearance:auto}
