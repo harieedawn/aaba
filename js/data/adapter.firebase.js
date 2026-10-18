@@ -35,8 +35,11 @@ export async function init() {
   let m = null;
   try { const s = await F.getDoc(F.doc(db, 'members', uid)); m = s.exists() ? conv(s.data()) : null; }
   catch (e) { if (e.code !== 'permission-denied') throw e; }
-  if (m) { myRole = m.role; watchSelf(uid); }
-  return { session: m ? { uid, ...m } : null };
+  if (m) { myRole = m.role; watchSelf(uid); return { session: { uid, ...m } }; }
+  // No member doc: anonymous guest, only while config/main.openView === true (rules enforce the same).
+  try { const c = await F.getDoc(F.doc(db, 'config', 'main')); if (c.exists() && c.data().openView === true) return { session: { uid, role: 'guest', name: 'Khách', studentId: null, groupId: null, titleId: null } }; }
+  catch (e) { if (e.code !== 'permission-denied') throw e; }
+  return { session: null };
 }
 
 // Revoked (member doc deleted) -> back to the join screen.
@@ -50,7 +53,7 @@ function watchSelf(uid) {
 // watch(col, cb, {cycle}) : 'config' delivers one object; entries filtered by cycle ('current' | id | null=all).
 export function watch(col, cb, opts = {}) {
   const sub = { dead: false, stops: [] };
-  const fail = e => { console.warn('aaba watch', col, e.code || e); sub.stops.splice(0).forEach(f => f()); sub.dead = e.code === 'permission-denied'; };
+  const fail = e => { console.warn('aaba watch', col, e.code || e); sub.stops.splice(0).forEach(f => f()); sub.dead = e.code === 'permission-denied'; if (sub.dead) opts.onDenied?.(); };
   const arr = s => cb(s.docs.map(docOf));
   sub.start = () => {
     sub.dead = false;

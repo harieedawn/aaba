@@ -1,5 +1,5 @@
 // Dev: first-run setup wizard (số tổ/tên/màu -> dán thành viên từng tổ -> thể lệ mẫu + lịch trực). Only when no groups.
-import { h } from '../../ui/dom.js';
+import { h, put } from '../../ui/dom.js';
 import * as store from '../../data/store.js';
 import { navigate } from '../../router.js';
 import { toast } from '../../ui/toast.js';
@@ -22,6 +22,7 @@ async function finish(st, rules, duty) {
   if (!cfg.categories || cfg._virtual) config.categories = CATEGORIES;
   if (!cfg.titles || cfg._virtual) config.titles = TITLES;
   if (!cfg.cycleWeeks || cfg._virtual) config.cycleWeeks = 4;
+  if (cfg._virtual) config.openView = true;
   const obj = { v: 1, config, groups, students };
   if (rules) obj.rules = seedRules();
   if (duty) obj.duty = roundRobin(list);
@@ -67,9 +68,9 @@ export default function setup() {
     }, 'Hoàn tất');
     return [h('div', { class: 'card' }, h('strong', null, `${st.className.trim() || 'Lớp'}: ${st.groups.length} tổ, ${total} học sinh`)), r, d, err, done];
   }
-  const paint = () => body.replaceChildren(bar(), h('div', { class: 'form' }, [s0, s1, s2][st.step]()));
+  const paint = () => put(body, bar(), h('div', { class: 'form' }, [s0, s1, s2][st.step]()));
   once('groups').then(gs => gs.length
-    ? body.replaceChildren(emptyState({ icon: 'shield', title: 'Lớp đã có dữ liệu', text: 'Thiết lập từ đầu chỉ dùng khi lớp chưa có tổ. Muốn làm lại: xuất cấu hình, rồi “Xóa dữ liệu lớp” trong Công cụ.', action: { label: 'Mở Công cụ', href: '#/dev/tools' } }))
+    ? put(body, emptyState({ icon: 'shield', title: 'Lớp đã có dữ liệu', text: 'Thiết lập từ đầu chỉ dùng khi lớp chưa có tổ. Muốn làm lại: xuất cấu hình, rồi “Xóa dữ liệu lớp” trong Công cụ.', action: { label: 'Mở Công cụ', href: '#/dev/tools' } }))
     : paint());
   return { el: body };
 }

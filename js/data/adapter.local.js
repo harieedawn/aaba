@@ -2,7 +2,7 @@
 // watch(col, cb, {cycle}) : cycle 'current' | cycleId filters entries. 'config' delivers the single config object.
 import { buildDemo } from './seed.js';
 const KEY = 'aaba.local.v1', RK = 'aaba.role', UK = 'aaba.uid';
-const ROLES = ['dev', 'admin', 'teacher', 'recorder', 'student'];
+const ROLES = ['dev', 'admin', 'teacher', 'recorder', 'student', 'guest'];
 let db, subs = [];
 
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} };
@@ -32,6 +32,7 @@ function demoSession() {
     }
   } catch {}
   if (!ROLES.includes(r)) r = 'recorder';
+  if (r === 'guest') return db.config.openView === true ? { uid: 'u_guest', role: 'guest', name: 'Khách', studentId: null, groupId: null, titleId: null } : null;
   const st = id => ({ studentId: id, groupId: db.students[id].groupId, titleId: db.students[id].titleId });
   const base = { uid: 'u_' + r, role: r };
   if (r === 'recorder') return { ...base, name: db.students.s_1_1.name, ...st('s_1_1') };

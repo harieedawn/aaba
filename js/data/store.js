@@ -21,9 +21,33 @@ const need = (ok, msg = 'Không có quyền') => { if (!ok) throw new Error(msg)
 
 export async function init() {
   A = BACKEND === 'firebase' ? await import('./adapter.firebase.js') : await import('./adapter.local.js');
-  const { session } = await A.init();
+  let { session } = await A.init();
+  if (session?.role === 'guest') session = await guestInit(session);
   setSession(session);
   return session;
+}
+// Guest: picked student lives only in localStorage (no Firestore write). Guest loses access when openView turns off.
+const PK = 'aaba.me';
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsDel = k => { try { localStorage.removeItem(k); } catch {} };
+async function guestInit(s) {
+  const kick = () => { stop?.(); setSession(null); };
+  const stop = A.watch('config', c => { if (c.openView !== true) kick(); }, { onDenied: kick });
+  const id = lsGet(PK);
+  if (!id) return s;
+  const st = await A.get('students', id).catch(() => null);
+  if (!st) { lsDel(PK); return s; }
+  return { ...s, studentId: id, groupId: st.groupId, titleId: st.titleId, name: st.name };
+}
+export async function pickStudent(id) {
+  const s = getSession();
+  need(s && s.role === 'guest');
+  lsDel('aaba.seen');
+  if (!id) { lsDel(PK); return setSession({ uid: s.uid, role: 'guest', name: 'Khách', studentId: null, groupId: null, titleId: null }); }
+  const st = await A.get('students', id);
+  need(st, 'Không tìm thấy học sinh');
+  try { localStorage.setItem(PK, id); } catch {}
+  setSession({ ...s, studentId: id, groupId: st.groupId, titleId: st.titleId, name: st.name });
 }
 export function on(col, cb, opts = {}) {
   const o = { ...opts };

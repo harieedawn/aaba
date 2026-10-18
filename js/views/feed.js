@@ -1,5 +1,5 @@
 // Nhật ký: day-grouped entries, filter chips (tổ, nhóm, trạng thái), cycle picker (past đợt read-only).
-import { h } from '../ui/dom.js';
+import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { dayKey, dayLabel, fmtDate } from '../format.js';
 const lab = t => { const l = dayLabel(t); return l.startsWith('Hôm') ? l : fmtDate(t); };
@@ -24,14 +24,14 @@ export default function feed() {
 
   function subscribe() {
     entSub?.(); entries = null;
-    list.replaceChildren(...skeletonCards(3));
+    put(list, ...skeletonCards(3));
     entSub = store.on('entries', l => { entries = l; paintList(); }, { cycleId: st.cycle });
   }
   function build() {
     const cycles = [...M.cycles].sort((a, b) => b.n - a.n);
     const sel = h('select', { class: 'sel', 'aria-label': 'Chọn đợt', onchange: e => { st.cycle = e.target.value; subscribe(); } },
       cycles.map(c => h('option', { value: c.id, selected: c.id === st.cycle }, `Đợt ${c.n}${c.id === M.config.currentCycleId ? ' (hiện tại)' : ''}`)));
-    controls.replaceChildren(sel, chips('g', [['', 'Tất cả tổ'], ...M.groups.map(g => [g.id, g.name])]),
+    put(controls, sel, chips('g', [['', 'Tất cả tổ'], ...M.groups.map(g => [g.id, g.name])]),
       chips('cat', [['', 'Tất cả nhóm'], ...M.config.categories.map(c => [c.id, c.name])]), chips('status', STATUS));
     built = true;
   }
@@ -50,7 +50,7 @@ export default function feed() {
       if (k !== key) { key = k; out.push(h('div', { class: 'day-h' }, h('span', null, lab(e.at)))); out.push((box = h('div', { class: 'card day-list' }))); }
       box.append(entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId), onOpen: x => entrySheet(x, { group: gm.get(x.groupId), student: sm.get(x.studentId), readOnly }) }));
     }
-    list.replaceChildren(...out);
+    put(list, ...out);
     if (!staggered && rows.length) { stagger(list.children); staggered = true; }
   }
   function sync() {

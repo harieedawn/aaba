@@ -1,9 +1,9 @@
 // Home: header, leaderboard (FLIP / count-up / bar grow / stagger), duty chip, "Hoạt động gần đây".
-import { h } from '../ui/dom.js';
+import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { rankGroups, deltaSince } from '../scoring.js';
 import { fmtNum, fmtPts, cycleInfo, startOfDay, weekKey } from '../format.js';
-import { themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
+import { bell, themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
 import { countUp, flip, stagger, floatDelta } from '../ui/anim.js';
 import { getSession, can, role } from '../session.js';
 
@@ -35,7 +35,7 @@ export default function home() {
   const side = h('div', { class: 'side-stack side' });
   const latest = h('div', { class: 'entries' });
   const el = h('div', { class: 'view home' },
-    h('header', { class: 'hdr' }, h('div', { class: 'hdr-main' }, hello, lead), themeToggle()),
+    h('header', { class: 'hdr' }, h('div', { class: 'hdr-main' }, hello, lead), bell(), themeToggle()),
     h('div', { class: 'hdr-prog' }, wk, wkT),
     h('div', { class: 'home-grid' },
       h('section', { 'aria-label': 'Bảng xếp hạng' }, board),
@@ -58,15 +58,15 @@ export default function home() {
     if (!c.fresh && d !== c.d) floatDelta(c.total, fmtPts(d - c.d), d - c.d > 0 ? 'pos' : 'neg');
     c.fresh = false; c.d = d;
     const rankLab = h('div', { class: 'hero-rank' }, 'Dẫn đầu');
-    if (top) c.el.replaceChildren(rankLab, h('div', { class: 'hero-name' }, c.name, c.mine), c.total, c.today);
-    else c.el.replaceChildren(c.rank, c.tile, h('div', { class: 'lb-id' }, h('div', { class: 'lb-name-row' }, c.name, c.mine), c.sub), h('div', { class: 'lb-score' }, c.total));
+    if (top) put(c.el, rankLab, h('div', { class: 'hero-name' }, c.name, c.mine), c.total, c.today);
+    else put(c.el, c.rank, c.tile, h('div', { class: 'lb-id' }, h('div', { class: 'lb-name-row' }, c.name, c.mine), c.sub), h('div', { class: 'lb-score' }, c.total));
     memo.set(g.id, { v: r.total, d });
   }
 
   function renderBoard(cats) {
     const ranked = rankGroups(S.groups, S.entries, cats, S.config.currentCycleId);
     const since = startOfDay(Date.now()), mine = getSession()?.groupId;
-    if (!done) board.replaceChildren();
+    if (!done) put(board);
     const next = ranked.map(r => {
       let c = cards.get(r.group.id);
       if (!c) cards.set(r.group.id, (c = makeCard(cats, r.group.id)));
@@ -91,7 +91,7 @@ export default function home() {
     const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(x => [x.id, x]));
     const rows = S.entries.filter(e => e.status !== 'void').sort((a, b) => b.at - a.at).slice(0, 5)
       .map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId) }));
-    latest.replaceChildren(...(rows.length ? rows : [emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm mới sẽ hiện ở đây.' })]));
+    put(latest, ...(rows.length ? rows : [emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm mới sẽ hiện ở đây.' })]));
     if (!latestDone && rows.length) { stagger(latest.children); latestDone = true; }
     const dg = gm.get(S.duty.find(d => d.id === weekKey(Date.now()))?.groupId);
     const pend = S.entries.filter(e => e.status === 'pending');
@@ -103,7 +103,7 @@ export default function home() {
       h('a', { class: 'btn pressable', href: '#/duyet' }, 'Xem')));
     else if (role() === 'recorder' && myPend) cards.push(h('section', { class: 'card' }, h('b', null, `${myPend} điểm đang chờ xác nhận`)));
     cards.push(h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Hoạt động gần đây'), h('a', { class: 'link', href: '#/lichsu' }, 'Xem tất cả')), latest));
-    side.replaceChildren(...cards);
+    put(side, ...cards);
   }
 
   function update() {
@@ -112,7 +112,7 @@ export default function home() {
     hello.textContent = first ? `Chào ${first}` : 'Chào bạn';
     const info = cycleInfo(S.cycles.find(c => c.id === S.config.currentCycleId), S.config.cycleWeeks);
     wkT.textContent = info ? `Đợt ${info.n} · tuần ${info.week}/${info.weeks} · còn ${info.daysLeft} ngày` : '';
-    wk.replaceChildren(...(info ? Array.from({ length: info.weeks }, (_, i) => h('i', { class: i < info.week ? 'on' : '' })) : []));
+    put(wk, ...(info ? Array.from({ length: info.weeks }, (_, i) => h('i', { class: i < info.week ? 'on' : '' })) : []));
     const ranked = renderBoard(S.config.categories);
     const [a, b] = ranked;
     lead.textContent = !a || !S.entries.length ? 'Chưa có điểm nào trong đợt này.'

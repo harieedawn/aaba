@@ -1,5 +1,5 @@
 // Ghi điểm: sheet flow. Tổ -> Học sinh -> Mục -> (qty) -> (note) -> big button. Duty rules go to the tổ on duty.
-import { h } from '../ui/dom.js';
+import { h, put } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import * as store from '../data/store.js';
 import { fmtPts, fmtNum, weekKey } from '../format.js';
@@ -53,7 +53,7 @@ export default function add() {
 
     function paintG() {
       const r = st.rule, cur = eg(), list = r?.duty ? D.groups.filter(g => g.id === cur) : rec ? D.groups.filter(g => g.id === me.groupId) : D.groups;
-      gBox.replaceChildren(...list.map(g => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(g.id === cur), disabled: rec || !!r?.duty,
+      put(gBox, ...list.map(g => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(g.id === cur), disabled: rec || !!r?.duty,
         onclick: () => { st.g = g.id; lastGroup = g.id; st.stu = undefined; paintAll(); } }, dot(g.color), g.name)));
       const dg = D.groups.find(g => g.id === dutyG());
       gHint.hidden = !r?.duty;
@@ -64,7 +64,7 @@ export default function add() {
       sSec.hidden = r?.scope === 'group';
       const q = norm(st.sq), ss = D.students.filter(s => s.groupId === g && s.active !== false && norm(s.name).includes(q));
       const pick = (v, label) => h('button', { class: 'fchip pressable', type: 'button', 'aria-pressed': String(st.stu === v), onclick: () => { st.stu = v; paintS(); paintSubmit(); } }, label);
-      sChips.replaceChildren(...(r?.scope === 'student' ? [] : [pick('G', 'Cả tổ')]), ...ss.map(s => pick(s.id, s.name)));
+      put(sChips, ...(r?.scope === 'student' ? [] : [pick('G', 'Cả tổ')]), ...ss.map(s => pick(s.id, s.name)));
     }
     function paintR() {
       const q = norm(st.q), use = {};
@@ -72,9 +72,9 @@ export default function add() {
       const all = D.rules.filter(r => r.active !== false).sort((a, b) => a.order - b.order);
       const top = new Set(Object.entries(use).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => id));
       const isHot = r => r.hot || top.has(r.id);
-      cats.replaceChildren(...[['', 'Tất cả'], ...D.config.categories.map(c => [c.id, c.name])].map(([v, l]) => h('button', {
+      put(cats, ...[['', 'Tất cả'], ...D.config.categories.map(c => [c.id, c.name])].map(([v, l]) => h('button', {
         class: 'fchip pressable', type: 'button', 'aria-pressed': String(st.cat === v), onclick: () => { st.cat = v; paintR(); } }, l)));
-      signSeg.replaceChildren(...[['neg', 'Trừ điểm'], ['pos', 'Cộng điểm']].map(([v, l]) => h('button', { type: 'button', 'aria-pressed': String(st.sign === v),
+      put(signSeg, ...[['neg', 'Trừ điểm'], ['pos', 'Cộng điểm']].map(([v, l]) => h('button', { type: 'button', 'aria-pressed': String(st.sign === v),
         onclick: () => { st.sign = v; if (st.rule && (st.rule.points < 0) !== (v === 'neg')) st.rule = null; paintAll(); } }, l)));
       signSeg.classList.toggle('neg', st.sign === 'neg');
       const f = all.filter(r => (r.points < 0) === (st.sign === 'neg') && (!st.cat || r.cat === st.cat) && (!q || norm(r.name).includes(q)));
@@ -82,7 +82,7 @@ export default function add() {
         h('span', { class: 'rule-main' }, h('span', null, r.name), r.duty && h('span', { class: 'rule-note muted', style: { display: 'block' } }, 'Tổ trực')),
         h('span', { class: 'amt ' + (r.points > 0 ? 'pos' : 'neg') }, fmtPts(r.points)));
       const hot = q || st.cat ? [] : f.filter(isHot), rest = q || st.cat ? f.sort((a, b) => isHot(b) - isHot(a)) : f.filter(r => !isHot(r));
-      rList.replaceChildren(...(hot.length ? [lab('Thường dùng'), ...hot.map(row), lab('Tất cả nội dung')] : []), ...rest.map(row),
+      put(rList, ...(hot.length ? [lab('Thường dùng'), ...hot.map(row), lab('Tất cả nội dung')] : []), ...rest.map(row),
         ...(f.length ? [] : [h('p', { class: 'muted' }, 'Không tìm thấy nội dung nào.')]));
     }
     function pickRule(r) {
@@ -115,11 +115,11 @@ export default function add() {
     function success(e) {
       const grp = D.groups.find(g => g.id === e.groupId), stu = D.students.find(s => s.id === e.studentId);
       const title = h('h2', null, e.status === 'pending' ? 'Đã gửi, chờ xác nhận' : 'Đã ghi điểm');
-      cont.replaceChildren(h('div', { class: 'success' }, h('div', { class: 'success-ico' }, icon('check', 40, 'check-draw')), title,
+      put(cont, h('div', { class: 'success' }, h('div', { class: 'success-ico' }, icon('check', 40, 'check-draw')), title,
         h('p', { class: 'muted' }, `${fmtPts(e.points)} điểm cho ${grp?.name || ''}${stu ? `, ${stu.name}` : ''}`),
         h('div', { class: 'row-btns', style: { width: '100%', marginTop: '8px' } },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sh.close() }, 'Xong'),
-          h('button', { class: 'btn', type: 'button', onclick: () => { st = fresh(st.g); sIn.value = rIn.value = note.value = ''; cont.replaceChildren(form); paintAll(); } }, 'Ghi tiếp'))));
+          h('button', { class: 'btn', type: 'button', onclick: () => { st = fresh(st.g); sIn.value = rIn.value = note.value = ''; put(cont, form); paintAll(); } }, 'Ghi tiếp'))));
       toast(`${fmtPts(e.points)} cho ${grp?.name || ''}`, { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
         store.voidEntry(e.id, 'hoàn tác').then(() => { title.textContent = 'Đã hoàn tác'; toast('Đã hoàn tác'); }, err => toast(err.message)) } });
     }

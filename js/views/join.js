@@ -1,5 +1,5 @@
 // Tham gia bằng mã đăng nhập: link/QR/nhập mã -> (học sinh chọn tên, chỉ một lần) -> trang chủ.
-import { h } from '../ui/dom.js';
+import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { BACKEND } from '../config.js';
 import { logo, dot, themeToggle } from '../ui/components.js';
@@ -37,20 +37,21 @@ export default function join({ params }) {
     btn.onclick = () => go();
     input.addEventListener('keydown', e => e.key === 'Enter' && go());
     const s = getSession();
-    root.replaceChildren(
+    put(root, 
       h('div', { class: 'sec-h' }, logo(), themeToggle()),
+      s?.role === 'guest' && h('a', { class: 'link', href: '#/' }, 'Xem mà không cần mã'),
       h('section', { class: 'card stack' },
         h('h1', null, 'Chào mừng đến aaba'),
         h('p', { class: 'muted' }, 'Quét mã QR bằng camera điện thoại, hoặc nhập mã 20 ký tự thầy cô đưa.'),
         h('div', { class: 'form' }, input, errEl, btn)),
       BACKEND === 'local' ? (demoBox = h('div')) : null,
-      s && !needName() ? h('p', { class: 'muted', style: { marginTop: '24px', fontSize: '13px' } }, `Đang dùng: ${s.name}.`, ' ', h('a', { class: 'link', href: '#/' }, 'Về xếp hạng')) : null);
+      s && s.role !== 'guest' && !needName() ? h('p', { class: 'muted', style: { marginTop: '24px', fontSize: '13px' } }, `Đang dùng: ${s.name}.`, ' ', h('a', { class: 'link', href: '#/' }, 'Về xếp hạng')) : null);
     paintDemo(input, go);
   }
   function paintDemo(input, go) {
     if (!demoBox) return;
     const act = invites.filter(i => i.active);
-    demoBox.replaceChildren(...(act.length ? [h('div', { class: 'pick-g' }, 'Mã dùng thử (chế độ thử nghiệm)'),
+    put(demoBox, ...(act.length ? [h('div', { class: 'pick-g' }, 'Mã dùng thử (chế độ thử nghiệm)'),
       h('div', { class: 'pick' }, act.map(i => h('button', { class: 'fchip pressable', 'aria-pressed': 'false', onclick: () => { input.value = i.id; go(i.id); } }, `${i.label} (${i.role})`)))] : []));
     demoBox._p = () => paintDemo(input, go);
   }
@@ -66,7 +67,7 @@ export default function join({ params }) {
     const list = h('div'), confirm = h('button', { class: 'btn', disabled: true, style: { width: '100%', marginTop: '16px' } }, 'Đây là tôi');
     const search = h('input', { class: 'input', placeholder: 'Tìm tên của bạn', 'aria-label': 'Tìm tên', oninput: e => { q = e.target.value.toLowerCase(); paint(); } });
     function paint() {
-      list.replaceChildren(...groups.flatMap(g => {
+      put(list, ...groups.flatMap(g => {
         const ss = students.filter(s => s.groupId === g.id && s.active !== false && s.name.toLowerCase().includes(q));
         return ss.length ? [h('div', { class: 'pick-g inl' }, dot(g.color), g.name), h('div', { class: 'pick' }, ss.map(s => h('button', {
           class: 'fchip pressable', 'aria-pressed': String(sel === s.id), onclick: () => { sel = s.id; confirm.disabled = false; paint(); } }, s.name)))] : [];
@@ -77,7 +78,7 @@ export default function join({ params }) {
       try { await store.claimStudent(sel); toast(`Chào ${getSession().name}`); navigate('/'); }
       catch (e) { confirm.disabled = false; toast('Không chọn được tên. Thử lại nhé.'); }
     };
-    root.replaceChildren(h('div', { class: 'sec-h' }, logo(), themeToggle()), h('h1', null, 'Bạn là ai?'),
+    put(root, h('div', { class: 'sec-h' }, logo(), themeToggle()), h('h1', null, 'Bạn là ai?'),
       h('p', { class: 'muted', style: { margin: '8px 0 16px' } }, 'Chọn tên của bạn trong danh sách. Chỉ chọn được một lần, hãy chọn cẩn thận.'), search, list, confirm);
     const done = () => groups.length && students.length && paint();
     const u1 = store.on('groups', v => { groups = v.sort((a, b) => a.order - b.order); done(); });

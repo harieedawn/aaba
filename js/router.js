@@ -1,5 +1,5 @@
 // Hash router. Views: default export (ctx) => {el, destroy?}. Routes without a view yet render a "Sắp có" stub.
-import { h } from './ui/dom.js';
+import { h, put } from './ui/dom.js';
 import { emptyState } from './ui/components.js';
 import { can, onSession, getSession } from './session.js';
 import { reduced } from './ui/anim.js';
@@ -50,7 +50,7 @@ export function startRouter(outlet, { onRoute } = {}) {
       const old = cur;
       cur = view;
       old?.destroy?.();
-      outlet.replaceChildren(view.el);
+      put(outlet, view.el);
       if (!first && !vt && !reduced()) view.el.classList.add('view-enter');
       scrollTo(0, 0);
       onRoute?.(r.path);

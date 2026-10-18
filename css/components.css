@@ -164,3 +164,7 @@
 html.lock .toasts{top:calc(env(safe-area-inset-top) + var(--sp-4));bottom:auto}
 .hdr-prog{margin:-4px 0 var(--sp-6)}
 .fchip.tile-opt,.tiles .fchip,.pick .fchip{min-height:56px;padding:0 var(--sp-4);border-radius:var(--r-s);font-size:var(--fs-15)}
+.ndot{position:absolute;top:9px;right:10px;width:10px;height:10px;border-radius:50%;background:var(--neg);border:2px solid var(--bg)}
+.nav-item .ico{position:relative}.nav-item .ico .ndot{top:-2px;right:-4px;border-color:var(--surface)}
+.tag.new{background:var(--neg-tint);color:var(--neg-text)}
+.pick-box{display:flex;flex-direction:column;gap:var(--sp-3)}

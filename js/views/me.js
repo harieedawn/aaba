@@ -1,5 +1,7 @@
 // Tôi: my card, role cards (phone), theme, install hint, sign out, version.
 import { h } from '../ui/dom.js';
+import { namePicker, notifRow } from './me-parts.js';
+import { notifs, lastSeen, markSeen } from '../notify.js';
 import { icon } from '../ui/icons.js';
 import * as store from '../data/store.js';
 import { personalPoints } from '../scoring.js';
@@ -31,9 +33,13 @@ function installHint() {
 }
 
 export default function me() {
-  const body = h('div', { class: 'stack' });
+  const body = h('div', { class: 'stack' }), seenAtOpen = lastSeen();
   const stop = live(body, ['config', 'groups', 'students', 'entries', 'cycles'], S => {
-    const s = getSession(), r = role();
+    const s = getSession(), r = role(), guest = s.role === 'guest';
+    const codeLink = h('section', { class: 'card' }, h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'));
+    if (guest && !s.studentId) return [pageHeader('Tôi'), namePicker(S.groups, S.students), codeLink, h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg())];
+    queueMicrotask(markSeen);
+    const nf = notifs().slice(0, 20);
     const g = S.groups.find(x => x.id === s.groupId), title = (S.config.titles || []).find(t => t.id === s.titleId);
     const pending = S.entries.filter(e => e.status === 'pending').length;
     const mineAbout = !!s.studentId;
@@ -50,6 +56,9 @@ export default function me() {
           h('div', null, h('h2', null, s.name || 'Khách'),
             h('div', { class: 'muted' }, [ROLE_LABEL[r], title?.name, g?.name].filter(Boolean).join(' · ')))),
         pts !== null && h('div', { class: 'kv' }, h('span', { class: 'muted' }, 'Điểm cá nhân đợt này'), h('span', { class: 'me-big' }, fmtPts(pts)))),
+      s.studentId && h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Thông báo')),
+        nf.length ? nf.map(e => notifRow(e, e.at > seenAtOpen)) : emptyState({ icon: 'clock', title: 'Chưa có thông báo', text: 'Khi có điểm cộng hoặc trừ cho bạn, thông báo sẽ hiện ở đây.' }),
+        h('p', { class: 'muted', style: { fontSize: '13px', marginTop: '12px' } }, 'Thông báo hiện khi bạn mở aaba')),
       h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, mineAbout ? 'Điểm của tôi' : 'Điểm tôi đã ghi')),
         mine.length ? mine.map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId), onOpen: x => entrySheet(x, { group: gm.get(x.groupId), student: sm.get(x.studentId) }) }))
           : emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm sẽ hiện ở đây khi có.' })),
@@ -57,7 +66,9 @@ export default function me() {
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => setPreview(null) }, 'Thoát xem thử'))) : null,
       h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg()),
       installHint(),
-      h('section', { class: 'card' },
+      guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => store.pickStudent(null) }, 'Đổi tên'), h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'),
+        h('p', { class: 'muted', style: { textAlign: 'center', fontSize: '13px' } }, `aaba ${APP_VERSION}`))
+      : h('section', { class: 'card' },
         h('button', { class: 'btn btn-ghost', style: { width: '100%' }, onclick: () => store.signOut() }, 'Đăng xuất'),
         h('p', { class: 'muted', style: { textAlign: 'center', marginTop: '12px', fontSize: '13px' } }, `aaba ${APP_VERSION}`)),
     ];

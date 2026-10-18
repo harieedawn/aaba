@@ -1,12 +1,13 @@
 // Shared small components.
-import { h } from './dom.js';
+import { h, put } from './dom.js';
 import { icon } from './icons.js';
 import { fmtPts, relTime, fmtDate, fmtTime } from '../format.js';
 const CAT_ICON = { noiquy: 'shield', hoctap: 'book', phongtrao: 'flag' };
-import { getTheme, setTheme, onTheme, can } from '../session.js';
+import { getTheme, setTheme, onTheme, can, getSession } from '../session.js';
 import * as store from '../data/store.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
+import { unseen, onNotif } from '../notify.js';
 
 export const logo = () => h('span', { class: 'logo' }, h('span', { class: 'logo-sq', 'aria-hidden': 'true' }, 'a'), h('span', { class: 'logo-t' }, 'aaba'));
 export const dot = color => h('span', { class: `dot g-${color || 'slate'}`, 'aria-hidden': 'true' });
@@ -28,11 +29,21 @@ export function emptyState({ icon: ic = 'clock', title, text, action } = {}) {
 
 export function themeToggle() {
   const b = h('button', { class: 'icon-btn pressable', 'aria-label': 'Đổi giao diện sáng/tối' });
-  const paint = () => b.replaceChildren(icon(getTheme() === 'dark' ? 'sun' : 'moon'));
+  const paint = () => put(b, icon(getTheme() === 'dark' ? 'sun' : 'moon'));
   paint();
   b.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light' : 'dark'));
   onTheme(() => b.isConnected && paint());
   return b;
+}
+
+// Bell: only for anyone with a studentId; red dot while there are unseen entries about me. Opens Tôi (Thông báo).
+export function bell() {
+  if (!getSession()?.studentId) return null;
+  const dot = h('span', { class: 'ndot', hidden: !unseen() });
+  const a = h('a', { class: 'icon-btn pressable', href: '#/toi', 'aria-label': 'Thông báo' }, icon('bell'), dot);
+  let on = false;
+  const off = onNotif(() => { if (a.isConnected) { on = true; dot.hidden = !unseen(); } else if (on) off(); });
+  return a;
 }
 
 export function entryRow(e, { group, student, onOpen, catId } = {}) {
@@ -65,11 +76,11 @@ export function pageHeader(title, { back, sub } = {}) {
 export function live(el, cols, render, opts = {}) {
   const S = {};
   let first = true;
-  el.replaceChildren(...skeletonCards(3));
+  put(el, ...skeletonCards(3));
   const paint = () => {
     if (!cols.every(c => S[c] !== undefined)) return;
-    try { el.replaceChildren(...[].concat(render(S, first))); }
-    catch (err) { el.replaceChildren(emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: err.message, action: { label: 'Tải lại', onClick: () => location.reload() } })); }
+    try { put(el, ...[].concat(render(S, first))); }
+    catch (err) { put(el, emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: err.message, action: { label: 'Tải lại', onClick: () => location.reload() } })); }
     first = false;
   };
   const subs = cols.map(c => store.on(c, v => { S[c] = v; paint(); }, opts[c]));

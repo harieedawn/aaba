@@ -1,5 +1,5 @@
 // QR as SVG via CDN qrcode-generator@1.4.4 (lazy). On failure: link + code as text.
-import { h } from '../ui/dom.js';
+import { h, put } from '../ui/dom.js';
 const URL_ = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
 let loading;
 const load = () => loading ||= new Promise((ok, no) => {
@@ -25,7 +25,7 @@ export function renderQR(text, { code, size = 220 } = {}) {
     const svg = t.content.firstElementChild;
     svg.removeAttribute('width'); svg.removeAttribute('height');
     svg.style.cssText = 'width:100%;height:100%;display:block';
-    box.replaceChildren(svg);
-  }).catch(() => { box.style.cssText = ''; box.removeAttribute('role'); box.replaceChildren(fallback(text, code)); });
+    put(box, svg);
+  }).catch(() => { box.style.cssText = ''; box.removeAttribute('role'); put(box, fallback(text, code)); });
   return box;
 }

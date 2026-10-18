@@ -1,5 +1,5 @@
 // Dev: export config (file + minified copy), full backup (with entries), import (preview, confirm, merge|replace).
-import { h } from '../../ui/dom.js';
+import { h, put } from '../../ui/dom.js';
 import * as store from '../../data/store.js';
 import { toast } from '../../ui/toast.js';
 import { field, textArea, selectInput, confirmSheet, copyText, download, errBox } from '../../ui/form.js';
@@ -35,7 +35,7 @@ function importCard() {
       if (!obj || obj.v !== 1) throw new Error('File không đúng định dạng aaba (thiếu v:1).');
     } catch (e) { obj = null; err.textContent = e instanceof SyntaxError ? 'Không đọc được JSON.' : e.message; err.hidden = false; return; }
     const rows = [['Tổ', n(obj.groups)], ['Học sinh', n(obj.students)], ['Thể lệ', n(obj.rules)], ['Lịch trực', n(obj.duty)], ['Đợt', n(obj.cycles)], ['Điểm đã ghi', n(obj.entries)]];
-    prev.replaceChildren(h('div', { class: 'kv' }, h('strong', null, obj.config?.className || 'Cấu hình'), h('span', { class: 'muted' }, obj.exportedAt ? obj.exportedAt.slice(0, 10) : '')),
+    put(prev, h('div', { class: 'kv' }, h('strong', null, obj.config?.className || 'Cấu hình'), h('span', { class: 'muted' }, obj.exportedAt ? obj.exportedAt.slice(0, 10) : '')),
       ...rows.filter(r => r[1]).map(([k, v]) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', null, String(v)))));
     prev.hidden = go.hidden = false;
   };

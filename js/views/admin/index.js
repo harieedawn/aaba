@@ -1,5 +1,5 @@
 // Quản lý hub (#/quanly) + section dispatcher (#/quanly/nhom|luat|chucvu|truc|moi|vong|caidat).
-import { h } from '../../ui/dom.js';
+import { h, put } from '../../ui/dom.js';
 import { icon } from '../../ui/icons.js';
 import { pageHeader, emptyState } from '../../ui/components.js';
 
@@ -19,7 +19,7 @@ export default function admin({ params }) {
       icon(ic, 22), h('span', { class: 'grow' }, label), icon('chevron', 20))))) };
   const body = h('div', { class: 'stack' });
   let inner, dead = false;
-  sec[3]().then(m => { if (dead) return; inner = m.default(); body.replaceChildren(inner.el); })
-    .catch(e => body.replaceChildren(emptyState({ icon: 'x', title: 'Không mở được mục này', text: e.message })));
+  sec[3]().then(m => { if (dead) return; inner = m.default(); put(body, inner.el); })
+    .catch(e => put(body, emptyState({ icon: 'x', title: 'Không mở được mục này', text: e.message })));
   return { el: h('div', { class: 'view narrow' }, pageHeader(sec[1], { back: '#/quanly' }), body), destroy: () => { dead = true; inner?.destroy?.(); } };
 }

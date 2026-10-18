@@ -1,6 +1,6 @@
 // Session, permissions (can) and theme preference. Mirrors SPEC §7 table.
 const ROLES = ['student', 'recorder', 'teacher', 'admin', 'dev'];
-export const ROLE_LABEL = { student: 'Học sinh', recorder: 'Tổ trưởng', teacher: 'Giáo viên', admin: 'Ban cán sự', dev: 'Quản trị' };
+export const ROLE_LABEL = { student: 'Học sinh', recorder: 'Tổ trưởng', teacher: 'Giáo viên', admin: 'Ban cán sự', dev: 'Quản trị', guest: 'Khách' };
 let S = null;
 const subs = new Set();
 
@@ -22,6 +22,7 @@ export function setPreview(r) {
 export function can(action, ctx = {}) {
   const r = role();
   if (!r || !S) return false;
+  if (r === 'guest') return action === 'view';
   const staff = r === 'teacher' || r === 'admin' || r === 'dev';
   switch (action) {
     case 'view': return true;

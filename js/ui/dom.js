@@ -4,6 +4,11 @@ export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 function add(el, kids) {
   for (const k of kids.flat(Infinity)) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(k));
 }
+export function put(el, ...kids) {
+  el.replaceChildren();
+  add(el, kids);
+  return el;
+}
 export function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
