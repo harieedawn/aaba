@@ -2,7 +2,7 @@
 import { h } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { fmtPts } from '../format.js';
-import { emptyState, pageHeader, live, entryRow, reasonSheet } from '../ui/components.js';
+import { emptyState, pageHeader, live, entryRow, reasonSheet, pendingSrc } from '../ui/components.js';
 import { toast } from '../ui/toast.js';
 import { getSession, can } from '../session.js';
 import { stagger } from '../ui/anim.js';
@@ -12,7 +12,7 @@ export default function review() {
   const body = h('div', { class: 'stack' });
   const stop = live(body, ['config', 'groups', 'students', 'entries'], (S, first) => {
     const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(s => [s.id, s]));
-    const pend = S.entries.filter(e => e.status === 'pending').sort((a, b) => a.at - b.at);
+    const pend = S.entries.filter(e => e.status === 'pending').sort((a, b) => a.at - b.at); // pending from ANY week
     const out = [pageHeader('Cần xác nhận', { sub: pend.length ? `${pend.length} điểm đang chờ` : null })];
     out.push(h('p', { class: 'muted' }, 'Điểm cộng do tổ trưởng ghi cần giáo viên hoặc ban cán sự xác nhận.'));
     if (!pend.length) out.push(emptyState({ icon: 'check', title: 'Không có gì cần xác nhận', text: 'Điểm chờ xác nhận sẽ hiện ở đây.' }));
@@ -29,6 +29,6 @@ export default function review() {
     }
     if (first) queueMicrotask(() => stagger(body.children));
     return out;
-  });
+  }, { src: { entries: pendingSrc } });
   return { el: h('div', { class: 'view narrow' }, body), destroy: stop };
 }

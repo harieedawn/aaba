@@ -1,19 +1,23 @@
 /* store.js: the ONLY data access point for views. Adapters: adapter.local.js | adapter.firebase.js (P5).
  * Methods (15):
  *  init()                         -> loads adapter, sets session, returns it
- *  on(col, cb, opts)              -> unsubscribe. cols: config (object), groups, students, rules, entries,
- *                                    cycles, members, invites (arrays of {id,...}). entries = current đợt
- *                                    unless opts.all or opts.cycleId.
+ *  on(col, cb, opts)              -> unsubscribe. cols: config (object), groups, students, rules, cycles (dormant),
+ *                                    members, invites (arrays of {id,...}). NOT entries (see week API below).
  *  addEntry({groupId,studentId,ruleId,qty,note}) -> entry   (snapshots rule, sets status per role)
  *  voidEntry(id, reason)          approveEntry(id)
  *  saveDoc(col, id|null, data)    -> id (merge)        deleteDoc(col, id)
- *  closeCycle()                   -> stores summary, opens next đợt
+ *  onWeek(cb)                     -> unsubscribe. realtime CURRENT week, auto rollover. cb({entries, weekStart})
+ *  weekEntries(startMs,{fresh})   -> {entries, truncated} one-time, cached (memory + localStorage aaba.wk.<key>)
+ *  invalidateWeek(key)            pendingEntries(cb) / studentEntries(id, cb) -> unsubscribe, realtime
+ *  stats()                        -> {docs} docs delivered by the server this session
  *  createInvite(inv) -> code      revokeInvite(code)   joinWithCode(code)   claimStudent(studentId)
  *  exportConfig({withEntries})    importConfig(obj, 'merge'|'replace')      signOut()
  */
 import { BACKEND, APP_VERSION } from '../config.js';
 import { getSession, setSession, can, role } from '../session.js';
-import { cycleSummary } from '../scoring.js';
+import { bind, invalidateWeek } from './weekstore.js';
+import { weekStart, weekKey } from '../weeks.js';
+const inv = at => invalidateWeek(weekKey(weekStart(at)));
 let A;
 const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPHA[b % ALPHA.length]).join('');
@@ -21,6 +25,7 @@ const need = (ok, msg = 'Bạn không có quyền làm việc này') => { if (!o
 
 export async function init() {
   A = BACKEND === 'firebase' ? await import('./adapter.firebase.js') : await import('./adapter.local.js');
+  bind(A);
   let { session } = await A.init();
   if (session?.role === 'guest') session = await guestInit(session);
   setSession(session);
@@ -49,14 +54,14 @@ export async function pickStudent(id) {
   try { localStorage.setItem(PK, id); } catch {}
   setSession({ ...s, studentId: id, groupId: st.groupId, titleId: st.titleId, name: st.name });
 }
-// ONE shared adapter listener per (collection, cycle), ref-counted: stops when the last subscriber leaves.
+// ONE shared adapter listener per collection, ref-counted.: stops when the last subscriber leaves.
 const hub = new Map();
 const share = (col, d) => (Array.isArray(d) ? d.slice()
   : col === 'config' && d ? { className: '', school: '', cycleWeeks: 4, currentCycleId: null, ...d, categories: d.categories || [], titles: d.titles || [] } : d);
 export function on(col, cb, opts = {}) {
+  if (col === 'entries') throw new Error('on(entries) was removed: use onWeek / weekEntries / pendingEntries / studentEntries');
   const o = {};
-  if (col === 'entries') o.cycle = opts.cycleId || (opts.all ? null : 'current');
-  const key = col + '|' + (o.cycle || '');
+  const key = col;
   let g = hub.get(key);
   if (!g) {
     g = { cbs: new Set(), den: new Set(), has: false, last: null, stop: null };
@@ -73,9 +78,13 @@ export function on(col, cb, opts = {}) {
     if (!g.cbs.size) { g.stop?.(); if (hub.get(key) === g) hub.delete(key); }
   };
 }
-export async function addEntry(e) {
+export { pendingEntries, studentEntries, onWeek, weekEntries, invalidateWeek, stats } from './weekstore.js';
+const BACK = 199 * 864e5;
+async function build(e) {
   const s = getSession();
   need(can('record', { groupId: e.groupId }));
+  const at = e.at == null ? null : +e.at;
+  if (at != null) { need(can('backdate')); need(at < Date.now() && at > Date.now() - BACK, 'Ngày không hợp lệ (tối đa 199 ngày trước)'); }
   const [rule, cfg] = await Promise.all([A.get('rules', e.ruleId), A.get('config', 'main')]);
   need(rule && rule.active !== false, 'Nội dung không tồn tại');
   if (e.studentId && role() === 'recorder') {
@@ -88,12 +97,37 @@ export async function addEntry(e) {
   const doc = {
     cycleId: cfg.currentCycleId, groupId: e.groupId, studentId, ruleId: e.ruleId,
     ruleName: rule.name, cat: rule.cat, unit: rule.points, qty, points, note: String(e.note || '').trim().slice(0, 500),
-    by: s.uid, byName: s.role === 'dev' ? 'Quản trị' : s.name, at: Date.now(),
+    by: s.uid, byName: s.role === 'dev' ? 'Quản trị' : s.name, at: at ?? Date.now(),
     status: role() === 'recorder' && points > 0 ? 'pending' : 'ok', voidReason: '', voidBy: '',
   };
-  const id = 'e_' + Date.now().toString(36) + rand(4);
-  await A.set('entries', id, doc);
+  if (e.replaces) doc.replaces = String(e.replaces);
+  return { id: 'e_' + Date.now().toString(36) + rand(4), doc, at };
+}
+// e.at (ms) = admin back-dated entry (rules: addedAt = server time). Normal entries use server time.
+export async function addEntry(e) {
+  const { id, doc, at } = await build(e);
+  await A.set('entries', id, doc, at == null ? {} : { at });
+  if (at != null) inv(at);
   return { id, ...doc };
+}
+// Sửa = ONE batch: new entry (replaces: oldId) + void the old one. Never mutates entry fields in place.
+export async function editEntry(oldId, e) {
+  need(can('backdate'));
+  const old = await A.get('entries', oldId);
+  need(old && old.status !== 'void', 'Dòng này đã được thu hồi');
+  const { id, doc, at } = await build({ ...e, at: e.at ?? old.at, replaces: oldId });
+  await A.batch([{ col: 'entries', id, data: doc, at },
+    { col: 'entries', id: oldId, data: { status: 'void', voidReason: 'Sửa lại', voidBy: getSession().uid }, merge: true }]);
+  inv(old.at); inv(at);
+  return { id, ...doc };
+}
+export async function ruleUsable(id) { const r = await A.get('rules', id); return !!r && r.active !== false; }
+// Xoá hẳn: only voided entries (rules enforce it too). Returns the number deleted.
+export async function purgeEntries(list) {
+  need(list.length && list.every(e => can('purge', { entry: e })));
+  for (const e of list) await A.remove('entries', e.id);
+  [...new Set(list.map(e => weekKey(weekStart(e.at))))].forEach(invalidateWeek);
+  return list.length;
 }
 export async function voidEntry(id, reason) {
   const entry = await A.get('entries', id);
@@ -101,11 +135,13 @@ export async function voidEntry(id, reason) {
   need(reason && reason.trim(), 'Cần nhập lý do');
   reason = reason.trim().slice(0, 500);
   await A.set('entries', id, { status: 'void', voidReason: reason, voidBy: getSession().uid }, { merge: true });
+  inv(entry.at);
 }
 export async function approveEntry(id) {
   const entry = await A.get('entries', id);
   need(entry && entry.status === 'pending' && can('approve', { entry }));
   await A.set('entries', id, { status: 'ok' }, { merge: true });
+  inv(entry.at);
 }
 export async function saveDoc(col, id, data) {
   need(can('edit'));
@@ -117,17 +153,6 @@ export async function saveDoc(col, id, data) {
   return id;
 }
 export async function deleteDoc(col, id) { need(can('edit')); await A.remove(col, id); }
-export async function closeCycle() {
-  need(can('close'));
-  const cfg = await A.get('config', 'main'), cur = await A.get('cycles', cfg.currentCycleId);
-  const [groups, entries] = await Promise.all([A.list('groups'), A.list('entries')]);
-  const now = Date.now(), nid = 'c' + (cur.n + 1);
-  await A.set('cycles', cfg.currentCycleId, { closed: true, end: now,
-    summary: cycleSummary(groups, entries, cfg.categories, cfg.currentCycleId) }, { merge: true });
-  await A.set('cycles', nid, { n: cur.n + 1, start: now, end: null, closed: false, summary: [] });
-  await A.set('config', 'main', { currentCycleId: nid }, { merge: true });
-  return nid;
-}
 export async function createInvite(inv) {
   need(can('createInvite', { role: inv.role }));
   const code = rand(20);

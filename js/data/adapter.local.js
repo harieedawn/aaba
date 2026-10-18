@@ -1,21 +1,28 @@
 // Local adapter: memory + localStorage. Generic primitives only; domain logic lives in store.js.
-// watch(col, cb, {cycle}) : cycle 'current' | cycleId filters entries. 'config' delivers the single config object.
+// watch(col, cb, opts): entries need opts.range | status | studentId. 'config' delivers the single config object.
 import { buildDemo } from './seed.js';
 const KEY = 'aaba.local.v1', RK = 'aaba.role', UK = 'aaba.uid';
 const ROLES = ['dev', 'admin', 'teacher', 'recorder', 'student', 'guest'];
 let db, subs = [];
 
+let docsIn = 0; // parity with adapter.firebase.js stats()
+export const stats = () => ({ docs: docsIn });
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} };
 const clone = x => JSON.parse(JSON.stringify(x));
 
+// same single-field filters as the firebase adapter: at range | status | studentId
+function filterEntries(a, o) {
+  if (o.range) return a.filter(e => e.at >= o.range[0] && e.at < o.range[1]);
+  if (o.status) return a.filter(e => e.status === o.status);
+  if (o.studentId) return a.filter(e => e.studentId === o.studentId);
+  return a;
+}
 function emit(s) {
   const { col, cb, opts } = s;
   if (col === 'config') return cb(clone({ id: 'main', ...db.config }));
   let a = Object.entries(db[col] || {}).map(([id, d]) => ({ id, ...d }));
-  if (col === 'entries' && opts.cycle) {
-    const c = opts.cycle === 'current' ? db.config.currentCycleId : opts.cycle;
-    a = a.filter(e => e.cycleId === c);
-  }
+  if (col === 'entries') a = filterEntries(a, opts);
+  docsIn += col === 'entries' ? a.length : 0;
   cb(clone(a));
 }
 const notify = col => subs.filter(s => s.col === col).forEach(emit);
@@ -59,11 +66,25 @@ export function watch(col, cb, opts = {}) {
 }
 export const get = async (col, id) => clone(col === 'config' ? db.config : db[col]?.[id] ?? null);
 export const list = async col => Object.entries(db[col] || {}).map(([id, d]) => ({ id, ...clone(d) }));
-export async function set(col, id, data, { merge = false } = {}) {
+const prep = (col, data, { merge = false, at = null } = {}) => {
+  const d = clone(data);
+  if (col === 'entries' && !merge && typeof at === 'number') { d.at = at; d.addedAt = Date.now(); }
+  return d;
+};
+export async function entriesBetween(a, b, limit = 1000) {
+  const all = Object.entries(db.entries || {}).map(([id, d]) => ({ id, ...clone(d) })).filter(e => e.at >= a && e.at < b);
+  docsIn += Math.min(all.length, limit + 1);
+  return { docs: all.slice(0, limit), truncated: all.length > limit };
+}
+export async function batch(ops) {
+  for (const { col, id, data, ...o } of ops) { const d = prep(col, data, o); db[col][id] = o.merge ? { ...(db[col][id] || {}), ...d } : d; }
+  persist(); [...new Set(ops.map(o => o.col))].forEach(notify);
+}
+export async function set(col, id, data, o = {}) {
+  const { merge = false } = o; data = prep(col, data, o);
   if (col === 'config') db.config = merge ? { ...db.config, ...clone(data) } : clone(data);
   else db[col][id] = merge ? { ...(db[col][id] || {}), ...clone(data) } : clone(data);
   persist(); notify(col);
-  if (col === 'config') notify('entries'); // current cycle may have changed
 }
 export async function remove(col, id) { delete db[col]?.[id]; persist(); notify(col); }
 export const dump = async () => clone(db);

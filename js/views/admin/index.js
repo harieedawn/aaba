@@ -1,4 +1,4 @@
-// Quản lý hub (#/quanly) + section dispatcher (#/quanly/nhom|luat|chucvu|truc|moi|vong|caidat).
+// Quản lý hub (#/quanly) + section dispatcher (#/quanly/nhom|luat|chucvu|moi|caidat).
 import { h, put } from '../../ui/dom.js';
 import { icon } from '../../ui/icons.js';
 import { pageHeader, emptyState } from '../../ui/components.js';
@@ -8,7 +8,6 @@ const SECTIONS = [
   ['luat', 'Thể lệ', 'book', () => import('./rules.js')],
   ['chucvu', 'Chức vụ', 'shield', () => import('./titles.js')],
   ['moi', 'Mã đăng nhập', 'user', () => import('./invites.js')],
-  ['vong', 'Tổng kết đợt', 'check', () => import('./cycle.js')],
   ['caidat', 'Cài đặt lớp', 'settings', () => import('./settings.js')],
 ];
 export default function admin({ params }) {

@@ -3,12 +3,16 @@ import { h, put } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import * as store from '../data/store.js';
 import { fmtPts, fmtNum } from '../format.js';
-import { dot, pageHeader, live, entryRow, entrySheet, emptyState } from '../ui/components.js';
+import { dot, pageHeader, live, entryRow, entrySheet, emptyState, weekSrc } from '../ui/components.js';
 import { openSheet } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { getSession, can, role } from '../session.js';
 import { navigate } from '../router.js';
 import { act } from '../ui/act.js';
+import { dateRow } from './add-date.js';
+import { takeDraft } from '../ui/draft.js';
+import { confirmSheet } from '../ui/form.js';
+import { weekStart, label as wkLabel } from '../weeks.js';
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
 let lastGroup = null; // "Ghi tiếp" / next visit keeps the tổ
@@ -17,7 +21,7 @@ const fresh = g => ({ g, stu: undefined, cat: '', q: '', sq: '', rule: null, qty
 export default function add() {
   let D = null, sh = null, closing = false;
   const body = h('div', { class: 'stack' });
-  const stop = live(body, ['config', 'groups', 'students', 'rules', 'entries'], (S, first) => {
+  const stop = live(body, ['config', 'groups', 'students', 'rules', 'entries'], (S, first) => { // entries = current week
     D = S;
     if (first) queueMicrotask(openFlow);
     const gm = new Map(S.groups.map(g => [g.id, g])), sm = new Map(S.students.map(s => [s.id, s]));
@@ -25,12 +29,20 @@ export default function add() {
     return [pageHeader('Ghi điểm', { sub: 'Điểm bạn ghi gần đây' }), h('section', { class: 'card' },
       mine.length ? mine.map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId), onOpen: x => entrySheet(x, { group: gm.get(x.groupId), student: sm.get(x.studentId) }) }))
         : emptyState({ icon: 'plus', title: 'Bạn chưa ghi điểm nào', text: 'Điểm bạn ghi sẽ hiện ở đây.' }))];
-  });
+  }, { src: { entries: weekSrc } });
 
   function openFlow() {
     if (sh || !D) return;
     const me = getSession(), rec = role() === 'recorder';
     let st = fresh(rec ? me.groupId : D.groups.some(g => g.id === lastGroup) ? lastGroup : D.groups[0]?.id);
+    let ready = false;
+    const dr = takeDraft(); let ed = dr?.edit || null;
+    if (ed) {
+      const r0 = D.rules.find(x => x.id === ed.ruleId && x.active !== false);
+      if (!r0) { toast('Nội dung này đã bị tắt hoặc xoá nên không sửa được.'); return navigate('/'); }
+      st = { ...fresh(ed.groupId), stu: ed.studentId || 'G', rule: r0, qty: ed.qty, sign: ed.points < 0 ? 'neg' : 'pos' };
+    }
+    const dUi = can('backdate') ? dateRow({ orig: ed?.at ?? null, preset: dr?.date || null, onChange: () => ready && paintSubmit() }) : null;
     const eg = () => st.g;
     const lab = t => h('div', { class: 'add-lab' }, t);
     const stepH = (n, t) => h('div', { class: 'step-h' }, `Bước ${n}/3 · ${t}`);
@@ -48,8 +60,9 @@ export default function add() {
     const submit = h('button', { class: 'btn', type: 'button' }), subHint = h('div', { class: 'hint', hidden: true });
     const form = h('div', null, h('div', { class: 'add-sec' }, stepH(1, 'Chọn tổ và học sinh'), gBox), sSec,
       h('div', { class: 'add-sec' }, stepH(2, 'Chọn nội dung'), signSeg, h('div', { style: { height: '8px' } }), rIn, h('div', { style: { height: '8px' } }), cats, rList), qSec,
-      h('div', { class: 'add-sec' }, stepH(3, 'Xác nhận'), note), h('div', { class: 'add-submit' }, submit, subHint));
+      h('div', { class: 'add-sec' }, stepH(3, 'Xác nhận'), dUi?.el, note), h('div', { class: 'add-submit' }, submit, subHint));
     const cont = h('div', null, form);
+    if (ed) note.value = ed.note || '';
 
     function paintG() {
       const cur = eg(), list = rec ? D.groups.filter(g => g.id === me.groupId) : D.groups;
@@ -97,6 +110,8 @@ export default function add() {
       else if (!can('record', { groupId: gid })) text = 'Bạn không được ghi cho tổ này';
       else if (!stuOk) text = r.scope === 'student' ? 'Chọn học sinh' : 'Chọn học sinh hoặc Cả tổ';
       else { ok = true; const n = fmtNum(Math.abs(r.points * st.qty)); text = r.points < 0 ? `Trừ ${n} điểm của ${grp.name}` : `Cộng ${n} điểm cho ${grp.name}`; }
+      if (ok && dUi && !dUi.valid()) { ok = false; text = 'Chọn ngày hợp lệ'; }
+      if (ok && ed) text = 'Lưu bản sửa';
       submit.textContent = text; submit.disabled = !ok; submit.className = 'btn' + (ok && r.points < 0 ? ' neg' : '');
       const wait = ok && rec && r.points > 0;
       subHint.hidden = !wait; subHint.textContent = wait ? 'Điểm cộng sẽ chờ giáo viên xác nhận.' : '';
@@ -105,21 +120,25 @@ export default function add() {
 
     submit.onclick = () => {
       const r = st.rule, gid = eg(), studentId = r.scope === 'group' || st.stu === 'G' ? null : st.stu;
-      act(async () => success(await store.addEntry({ groupId: gid, studentId, ruleId: r.id, qty: st.qty, note: note.value })), { btn: submit });
+      const dt = dUi ? dUi.at(!!ed) : null, p = { groupId: gid, studentId, ruleId: r.id, qty: st.qty, note: note.value, at: dt };
+      const save = async () => success(ed ? await store.editEntry(ed.id, p) : await store.addEntry(p));
+      if (dt != null && weekStart(dt) !== weekStart(Date.now())) confirmSheet({ title: 'Ghi vào tuần đã tổng kết?', danger: false, label: ed ? 'Lưu bản sửa' : 'Ghi điểm',
+        text: `Điểm sẽ được tính vào tuần ${wkLabel(weekStart(dt))}. Bảng tổng kết của tuần đó sẽ thay đổi.`, onConfirm: save });
+      else act(save, { btn: submit });
     };
     function success(e) {
       const grp = D.groups.find(g => g.id === e.groupId), stu = D.students.find(s => s.id === e.studentId);
-      const title = h('h2', null, e.status === 'pending' ? 'Đã gửi, chờ xác nhận' : 'Đã ghi điểm');
+      const title = h('h2', null, e.status === 'pending' ? 'Đã gửi, chờ xác nhận' : ed ? 'Đã lưu bản sửa' : 'Đã ghi điểm');
       put(cont, h('div', { class: 'success' }, h('div', { class: 'success-ico' }, icon('check', 40, 'check-draw')), title,
         h('p', { class: 'muted' }, `${fmtPts(e.points)} điểm cho ${grp?.name || ''}${stu ? `, ${stu.name}` : ''}`),
         h('div', { class: 'row-btns', style: { width: '100%', marginTop: '8px' } },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sh.close() }, 'Xong'),
-          h('button', { class: 'btn', type: 'button', onclick: () => { st = fresh(st.g); sIn.value = rIn.value = note.value = ''; put(cont, form); paintAll(); } }, 'Ghi tiếp'))));
-      toast(`${fmtPts(e.points)} cho ${grp?.name || ''}`, { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
+          h('button', { class: 'btn', type: 'button', onclick: () => { ed = null; dUi?.reset(); st = fresh(st.g); sIn.value = rIn.value = note.value = ''; put(cont, form); paintAll(); } }, 'Ghi tiếp'))));
+      if (!ed) toast(`${fmtPts(e.points)} cho ${grp?.name || ''}`, { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
         act(async () => { await store.voidEntry(e.id, 'hoàn tác'); title.textContent = 'Đã hoàn tác'; }, { ok: 'Đã hoàn tác' }) } });
     }
-    sh = openSheet({ title: 'Ghi điểm', content: cont, onClose: () => { sh = null; if (!closing) navigate('/'); } });
-    paintAll();
+    sh = openSheet({ title: ed ? 'Sửa điểm' : 'Ghi điểm', content: cont, onClose: () => { sh = null; if (!closing) navigate('/'); } });
+    paintAll(); ready = true;
   }
   return { el: h('div', { class: 'view narrow' }, body), destroy: () => { closing = true; stop(); sh?.close(); } };
 }

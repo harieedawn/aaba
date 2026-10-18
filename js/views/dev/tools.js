@@ -33,7 +33,7 @@ function diag() {
 }
 function wipe(S) {
   const go = () => confirmSheet({ title: 'Xóa dữ liệu lớp?', label: 'Xóa dữ liệu', requireText: 'XOA',
-    text: 'Xóa tổ, học sinh, thể lệ, điểm và đợt; giữ tên lớp và mã mời. Hãy xuất cấu hình trước. Không hoàn tác được.',
+    text: 'Xóa tổ, học sinh, thể lệ, điểm; giữ tên lớp và mã mời. Hãy xuất cấu hình trước. Không hoàn tác được.',
     onConfirm: async () => {
       const c = S.config;
       await store.importConfig({ v: 1, config: { className: c.className || '', school: c.school || '', cycleWeeks: c.cycleWeeks || 4, currentCycleId: 'c1', categories: CATEGORIES, titles: TITLES },

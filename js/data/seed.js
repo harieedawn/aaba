@@ -1,5 +1,5 @@
 // Seed rules (SPEC §12), default titles/categories and demo data (SPEC §13).
-import { weekKey, startOfWeek } from '../format.js';
+import { weekStart, WEEK } from '../weeks.js';
 const DAY = 864e5, HOUR = 36e5;
 
 export const CATEGORIES = [
@@ -76,7 +76,7 @@ const E = [
 ];
 
 export function buildDemo(now = Date.now()) {
-  const start = startOfWeek(now) - 7 * DAY; // current đợt began last Monday -> tuần 2/4
+  const cur = weekStart(now), start = cur - WEEK; // demo spreads entries over the last 5 weeks; cycles docs stay dormant
   const rules = seedRules();
   const groups = {}, students = {};
   COLORS.forEach((color, i) => {
@@ -90,8 +90,10 @@ export function buildDemo(now = Date.now()) {
   const entries = {};
   E.forEach(([g, s, rid, d, hr, status, qty, by], i) => {
     const rule = rules['r_' + rid];
-    const dayStart = Math.floor((now - d * DAY + 7 * HOUR) / DAY) * DAY - 7 * HOUR;
-    const t = hr < 0 ? now + hr * HOUR : Math.min(now - 30 * 6e4, Math.max(start + 3 * HOUR, dayStart + hr * HOUR));
+    // week offset 0..4 (0 = current); the 2nd pending entry sits 2 weeks back so "pending from any week" is visible
+    const w = hr < 0 ? (i === 23 ? 0 : 2) : i % 5, ws = cur - w * WEEK;
+    let t = hr < 0 && w === 0 ? now + hr * HOUR : ws + ((i * 3) % 7) * DAY + (8 + (i % 7)) * HOUR;
+    if (w === 0) t = Math.max(cur, Math.min(now - 30 * 6e4, Math.max(cur + HOUR, t)));
     const rec = `s_${g}_1`;
     entries['e_demo' + String(i + 1).padStart(2, '0')] = {
       cycleId: 'c2', groupId: 'g' + g, studentId: s ? `s_${g}_${s}` : null, ruleId: 'r_' + rid, ruleName: rule.name, cat: rule.cat,

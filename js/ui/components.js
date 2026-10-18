@@ -7,7 +7,9 @@ import { getTheme, setTheme, onTheme, can, getSession } from '../session.js';
 import * as store from '../data/store.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
-import { errMsg } from './act.js';
+import { errMsg, act } from './act.js';
+import { confirmSheet } from './form.js';
+import { setDraft } from './draft.js';
 import { logError } from '../errors.js';
 import { unseen, onNotif } from '../notify.js';
 
@@ -55,7 +57,7 @@ export function entryRow(e, { group, student, onOpen, catId } = {}) {
   const row = h('div', { class: 'entry' + (e.status === 'void' ? ' is-void' : '') + (onOpen ? ' pressable' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
     h('span', { class: 'ico-tile', 'aria-hidden': 'true' }, icon(CAT_ICON[cat] || 'flag', 20)),
     h('div', { class: 'entry-main' },
-      h('div', { class: 'entry-name' }, e.ruleName),
+      h('div', { class: 'entry-name' }, e.ruleName, e.addedAt && h('span', { class: 'tag' }, 'Bổ sung'), e.replaces && h('span', { class: 'tag' }, 'Bản sửa')),
       h('div', { class: 'entry-sub muted' }, `${group?.name || ''} · ${who} · ${relTime(e.at)}`)),
     h('div', { class: 'entry-pts' }, amt,
       e.status === 'pending' && h('span', { class: 'pend' }, icon('clock', 14), 'chờ xác nhận'),
@@ -75,6 +77,10 @@ export function pageHeader(title, { back, sub } = {}) {
 
 // Subscribe to collections; show skeleton until all arrived, then el <- render(S, first) (array of nodes).
 // Errors become an error state. Returns stop().
+// Entry sources for live(): current week (sets S.weekStart), all pending, one student's entries.
+export const weekSrc = (cb, S) => store.onWeek(m => { S.weekStart = m.weekStart; cb(m.entries); });
+export const pendingSrc = cb => store.pendingEntries(cb);
+export const studentSrc = id => cb => store.studentEntries(id, cb);
 export function live(el, cols, render, opts = {}) {
   const S = {};
   let first = true;
@@ -85,7 +91,8 @@ export function live(el, cols, render, opts = {}) {
     catch (err) { logError('render', err); put(el, emptyState({ icon: 'x', title: 'Có lỗi xảy ra', text: 'Không hiển thị được mục này. Hãy thử tải lại.', action: { label: 'Tải lại', onClick: () => location.reload() } })); }
     first = false;
   };
-  const subs = cols.map(c => store.on(c, v => { S[c] = v; paint(); }, opts[c]));
+  // opts.src[col](cb, S) -> unsub replaces store.on for that col (week model: weekSrc / pendingSrc / studentSrc)
+  const subs = cols.map(c => (opts.src?.[c] ? opts.src[c](v => { S[c] = v; paint(); }, S) : store.on(c, v => { S[c] = v; paint(); }, opts[c])));
   return () => subs.forEach(u => u());
 }
 
@@ -110,19 +117,35 @@ export function entrySheet(e, { group, student, readOnly } = {}) {
   const kv = (k, v) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', null, v));
   const status = { ok: chip('đã xác nhận', 'pos'), pending: chip('chờ xác nhận', 'warn'), void: chip('Đã thu hồi', 'neg') }[e.status];
   const canVoid = !readOnly && e.status !== 'void' && can('void', { entry: e });
+  const canEdit = !readOnly && e.status !== 'void' && can('backdate');
+  const canPurge = can('purge', { entry: e });
+  const stamp = t => `${fmtDate(t)} ${fmtTime(t)}`;
+  const edit = () => act(async () => {
+    if (!(await store.ruleUsable(e.ruleId))) return toast('Nội dung này đã bị tắt hoặc xoá nên không sửa được. Bạn vẫn có thể thu hồi điểm.');
+    setDraft({ edit: e }); sh.close(); location.hash = '#/ghi';
+  });
   const sh = openSheet({ title: 'Chi tiết điểm', content: h('div', { class: 'detail' },
     h('div', { class: 'detail-top' }, h('div', { class: 'detail-name' }, e.ruleName), pointsChip(e.points)),
     kv('Tổ', h('span', { class: 'inl' }, dot(group?.color), group?.name || '')),
     kv('Học sinh', e.studentId ? student?.name || 'Học sinh đã xoá' : 'Cả tổ'),
     e.qty > 1 && kv('Số lượng', `${e.qty} × ${fmtPts(e.unit)}`),
-    kv('Thời gian', `${fmtDate(e.at)} ${fmtTime(e.at)}`),
+    kv('Thời gian', stamp(e.at)),
+    e.addedAt && kv('Bổ sung', `Ghi lúc ${stamp(e.addedAt)} bởi ${e.byName}`),
+    e.replaces && kv('Bản sửa', 'Thay cho một dòng đã thu hồi'),
     kv('Người ghi', e.byName), kv('Trạng thái', status),
     e.note && kv('Ghi chú', e.note),
     e.status === 'void' && kv('Lý do thu hồi', e.voidReason),
-    canVoid && h('button', { class: 'btn btn-ghost detail-void', onclick: () => {
+    (canVoid || canEdit) && h('div', { class: 'row-btns detail-acts' },
+      canEdit && h('button', { class: 'btn btn-ghost', type: 'button', onclick: edit }, 'Sửa'),
+      canVoid && h('button', { class: 'btn btn-ghost detail-void', type: 'button', onclick: () => {
+        sh.close();
+        reasonSheet({ title: 'Thu hồi điểm này?', text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ không còn được tính.`, label: 'Thu hồi điểm',
+          onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã thu hồi điểm'); } });
+      } }, 'Thu hồi điểm')),
+    canPurge && h('button', { class: 'btn btn-ghost detail-void', type: 'button', onclick: () => {
       sh.close();
-      reasonSheet({ title: 'Thu hồi điểm này?', text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ không còn được tính.`, label: 'Thu hồi điểm',
-        onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã thu hồi điểm'); } });
-    } }, 'Thu hồi điểm')) });
+      confirmSheet({ title: 'Xoá hẳn dòng này?', label: 'Xoá hẳn', text: 'Xoá vĩnh viễn dòng này? Không khôi phục được. Điểm của tổ không thay đổi vì dòng này đã thu hồi.',
+        onConfirm: async () => { await store.purgeEntries([e]); toast('Đã xoá hẳn'); } });
+    } }, 'Xoá hẳn')) });
   return sh;
 }

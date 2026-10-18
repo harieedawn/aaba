@@ -15,7 +15,7 @@ function exportCard() {
   dl.onclick = run(dl, async () => { download('aaba-config.json', JSON.stringify(await store.exportConfig(), null, 2)); toast('Đã tải aaba-config.json'); });
   cp.onclick = run(cp, async () => { await copyText(JSON.stringify(await store.exportConfig()), 'Đã sao chép bản rút gọn'); });
   return h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Xuất cấu hình')),
-    h('p', { class: 'muted', style: { marginBottom: '12px' } }, 'Gồm cấu hình, chức vụ, tổ, học sinh, thể lệ, đợt, nhãn mã đăng nhập (không có mã). Không có điểm đã ghi.'),
+    h('p', { class: 'muted', style: { marginBottom: '12px' } }, 'Gồm cấu hình, chức vụ, tổ, học sinh, thể lệ, nhãn mã đăng nhập (không có mã). Không có điểm đã ghi.'),
     h('div', { class: 'sec-actions' }, dl, cp));
 }
 function backupCard() {
@@ -36,7 +36,7 @@ function importCard() {
       obj = JSON.parse(text);
       if (!obj || obj.v !== 1) throw new Error('File không đúng định dạng aaba (thiếu v:1).');
     } catch (e) { obj = null; err.textContent = e instanceof SyntaxError ? 'Không đọc được JSON.' : e.message; err.hidden = false; return; }
-    const rows = [['Tổ', n(obj.groups)], ['Học sinh', n(obj.students)], ['Thể lệ', n(obj.rules)], ['Đợt', n(obj.cycles)], ['Điểm đã ghi', n(obj.entries)]];
+    const rows = [['Tổ', n(obj.groups)], ['Học sinh', n(obj.students)], ['Thể lệ', n(obj.rules)], ['Điểm đã ghi', n(obj.entries)]];
     put(prev, h('div', { class: 'kv' }, h('strong', null, obj.config?.className || 'Cấu hình'), h('span', { class: 'muted' }, obj.exportedAt ? obj.exportedAt.slice(0, 10) : '')),
       ...rows.filter(r => r[1]).map(([k, v]) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', null, String(v)))));
     prev.hidden = go.hidden = false;

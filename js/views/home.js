@@ -2,13 +2,15 @@
 import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { rankGroups, deltaSince } from '../scoring.js';
-import { fmtNum, fmtPts, cycleInfo, startOfDay } from '../format.js';
+import { fmtNum, fmtPts, startOfDay } from '../format.js';
+import { label as wkLabel, daysLeft, dowOf, DAY } from '../weeks.js';
+import { toast } from '../ui/toast.js';
 import { bell, themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
 import { countUp, flip, stagger, floatDelta } from '../ui/anim.js';
 import { getSession, can, role } from '../session.js';
 
 const memo = new Map(); let memoOrder = ''; // last shown values: remount animates from them
-const COLS = ['config', 'groups', 'students', 'entries', 'cycles'];
+const COLS = ['config', 'groups', 'students', 'entries'];
 
 function makeCard(cats, id) {
   const c = { v: 0, d: 0 };
@@ -28,15 +30,16 @@ function makeCard(cats, id) {
 
 export default function home() {
   const S = {}, cards = new Map();
-  let order = '', done = false, latestDone = false;
+  let order = '', done = false, latestDone = false, prevStart = 0;
   const hello = h('h1', { class: 'hello' }), lead = h('p', { class: 'lead' });
-  const wk = h('div', { class: 'weekbar', 'aria-hidden': 'true' }), wkT = h('div', { class: 'wk-t' });
+  const wk = h('div', { class: 'weekbar', 'aria-hidden': 'true' }), wkT = h('div', { class: 'wk-t' }), recap = h('div');
   const hero = h('div'), board = h('div', { class: 'lb' }, skeletonCards(4));
   const side = h('div', { class: 'side-stack side' });
   const latest = h('div', { class: 'entries' });
   const el = h('div', { class: 'view home' },
     h('header', { class: 'hdr' }, h('div', { class: 'hdr-main' }, hello, lead), bell(), themeToggle()),
     h('div', { class: 'hdr-prog' }, wk, wkT),
+    recap,
     h('div', { class: 'home-grid' },
       h('section', { 'aria-label': 'Bảng xếp hạng' }, board),
       side));
@@ -64,7 +67,7 @@ export default function home() {
   }
 
   function renderBoard(cats) {
-    const ranked = rankGroups(S.groups, S.entries, cats, S.config.currentCycleId);
+    const ranked = rankGroups(S.groups, S.entries, cats);
     const since = startOfDay(Date.now()), mine = getSession()?.groupId;
     if (!done) put(board);
     const next = ranked.map(r => {
@@ -93,7 +96,7 @@ export default function home() {
       .map(e => entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId) }));
     put(latest, ...(rows.length ? rows : [emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm mới sẽ hiện ở đây.' })]));
     if (!latestDone && rows.length) { stagger(latest.children); latestDone = true; }
-    const pend = S.entries.filter(e => e.status === 'pending');
+    const pend = S.pending || [];
     const myPend = pend.filter(e => e.groupId === getSession()?.groupId).length;
     const cards = [];
     if (can('approve')) cards.push(h('section', { class: 'card need' }, h('div', null, h('b', null, 'Cần xác nhận'), h('div', { class: 'muted' }, pend.length ? `${pend.length} điểm đang chờ` : 'Không có điểm nào đang chờ')),
@@ -105,19 +108,28 @@ export default function home() {
 
   function update() {
     if (!COLS.every(k => S[k] !== undefined)) return;
+    if (S.weekStart === undefined) return;
     const ss = getSession(), first = (ss?.name || '').trim().split(/\s+/).pop();
     hello.textContent = first ? `Chào ${first}` : 'Chào bạn';
-    const info = cycleInfo(S.cycles.find(c => c.id === S.config.currentCycleId), S.config.cycleWeeks);
-    wkT.textContent = info ? `Đợt ${info.n} · tuần ${info.week}/${info.weeks} · còn ${info.daysLeft} ngày` : '';
-    put(wk, ...(info ? Array.from({ length: info.weeks }, (_, i) => h('i', { class: i < info.week ? 'on' : '' })) : []));
+    const now = Date.now(), dl = daysLeft(now), day = Math.min(6, Math.floor((now - S.weekStart) / DAY));
+    wkT.textContent = `Tuần ${wkLabel(S.weekStart)} · ${dl ? `còn ${dl} ngày` : 'Hôm nay chốt tuần'}`;
+    put(wk, ...Array.from({ length: 7 }, (_, i) => h('i', { class: i <= day ? 'on' : '' })));
+    if (prevStart && prevStart !== S.weekStart) toast('Tuần mới bắt đầu, điểm đã tính lại', { action: { label: 'Tổng kết', onClick: () => { location.hash = '#/tongket'; } }, duration: 8000 });
+    prevStart = S.weekStart;
+    put(recap, ...(dowOf(now) === 6
+      ? [h('div', { class: 'wk-card' }, h('b', null, 'Tổng kết tuần trước'), h('a', { href: '#/tongket' }, 'Xem đầy đủ'))]
+      : [h('a', { class: 'link wk-link', href: '#/tongket' }, 'Tổng kết tuần trước')]));
     const ranked = renderBoard(S.config.categories);
     const [a, b] = ranked;
-    lead.textContent = !a || !S.entries.length ? 'Chưa có điểm nào trong đợt này.'
+    lead.textContent = !a || !S.entries.length ? 'Chưa có điểm nào trong tuần này.'
       : !b ? `${a.group.name} đang dẫn đầu.`
       : a.total === b.total ? `${a.group.name} và ${b.group.name} đang bằng điểm.`
       : `${a.group.name} đang dẫn đầu, hơn ${b.group.name} ${fmtNum(a.total - b.total)} điểm.`;
     renderSide(ranked);
   }
-  const subs = COLS.map(c => store.on(c, v => { S[c] = v; update(); }));
+  const subs = ['config', 'groups', 'students'].map(c => store.on(c, v => { S[c] = v; update(); }));
+  subs.push(store.onWeek(m => { S.weekStart = m.weekStart; S.entries = m.entries; update(); }));
+  S.pending = [];
+  if (can('approve') || can('record')) subs.push(store.pendingEntries(es => { S.pending = es; if (S.entries && S.groups && S.students) renderSide(); }));
   return { el, destroy: () => subs.forEach(u => u()) };
 }
