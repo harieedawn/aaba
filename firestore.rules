@@ -1,0 +1,135 @@
+rules_version = '2';
+// aaba — Firestore rules. Mirror of SPEC §7 (roles) + §10 (invites). Paste into Firebase console → Firestore → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function memberRef() { return /databases/$(database)/documents/members/$(request.auth.uid); }
+    function isMember() { return signedIn() && exists(memberRef()); }
+    function me() { return get(memberRef()).data; }
+    function myRole() { return me().role; }
+    function isDev() { return isMember() && myRole() == 'dev'; }
+    function isAdmin() { return isMember() && myRole() == 'admin'; }
+    function isPriv() { return isMember() && myRole() in ['admin', 'dev']; }
+    function isStaff() { return isMember() && myRole() in ['teacher', 'admin', 'dev']; }
+    // roles an admin may touch (never admin/dev)
+    function lowRole(r) { return r in ['recorder', 'teacher', 'student']; }
+    function docOf(col, id) { return get(/databases/$(database)/documents/$(col)/$(id)).data; }
+    function optNull(m, k) { return m.get(k, null); }
+    function strOrNull(v) { return v == null || v is string; }
+
+    // ---------- config & class data: everyone in the class reads, admin/dev write ----------
+    match /config/{id} {
+      allow read: if isMember();
+      allow write: if isPriv() && id == 'main';
+    }
+    match /groups/{id}   { allow read: if isMember(); allow write: if isPriv(); }
+    match /students/{id} { allow read: if isMember(); allow write: if isPriv(); }
+    match /rules/{id}    { allow read: if isMember(); allow write: if isPriv(); }
+    match /cycles/{id}   { allow read: if isMember(); allow write: if isPriv(); }
+    match /duty/{id}     { allow read: if isMember(); allow write: if isPriv(); }
+
+    // ---------- members ----------
+    // Reads are limited: member docs carry the invite code (= a join secret). Self: always. Dev: all.
+    // Admin: only recorder/teacher/student members (queries must filter by role). Others: none.
+    match /members/{u} {
+      allow read: if isMember() && (u == uid() || isDev() || (isAdmin() && lowRole(resource.data.role)));
+      allow create: if signedIn() && u == uid() && validJoin(request.resource.data);
+      allow update: if signedIn() && u == uid() && validClaim(resource.data, request.resource.data);
+      allow delete: if isDev() || (isAdmin() && lowRole(resource.data.role));
+    }
+    function validJoin(d) {
+      let invRef = /databases/$(database)/documents/invites/$(d.inviteId);
+      return d.keys().hasOnly(['role', 'inviteId', 'studentId', 'groupId', 'titleId', 'name', 'at'])
+        && d.keys().hasAll(['role', 'inviteId', 'name'])
+        && d.inviteId is string && d.inviteId.matches('[A-Za-z0-9]{20}')
+        && exists(invRef)
+        && get(invRef).data.active == true
+        && d.role == get(invRef).data.role
+        && optNull(d, 'studentId') == optNull(get(invRef).data, 'studentId')
+        && optNull(d, 'groupId') == optNull(get(invRef).data, 'groupId')
+        && optNull(d, 'titleId') == optNull(get(invRef).data, 'titleId')
+        && d.name is string && d.name.size() <= 80
+        && (!('at' in d) || d.at is number);
+    }
+    // Student picks their name ONCE (studentId still null): only studentId/groupId/titleId/name change, copied from the roster.
+    function validClaim(old, nw) {
+      let st = docOf('students', nw.studentId);
+      return old.role == 'student' && optNull(old, 'studentId') == null
+        && nw.studentId is string
+        && nw.diff(old).affectedKeys().hasOnly(['studentId', 'groupId', 'titleId', 'name'])
+        && nw.role == old.role && nw.inviteId == old.inviteId
+        && nw.groupId == st.groupId && optNull(nw, 'titleId') == optNull(st, 'titleId') && nw.name == st.name;
+    }
+
+    // ---------- invites ----------
+    // Anyone signed in may GET one invite by its (unguessable) code. LIST: dev all; admin only low roles (queries must filter role).
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if isDev() || (isAdmin() && lowRole(resource.data.role));
+      allow create: if (isDev() || (isAdmin() && lowRole(request.resource.data.role))) && validInvite(request.resource.data);
+      allow update: if (isDev() || (isAdmin() && lowRole(resource.data.role)))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active'])
+        && request.resource.data.active is bool;
+      allow delete: if isDev();
+    }
+    function validInvite(d) {
+      return d.keys().hasOnly(['role', 'label', 'studentId', 'groupId', 'titleId', 'active', 'createdBy', 'at'])
+        && d.keys().hasAll(['role', 'label', 'active', 'createdBy'])
+        && d.role in ['dev', 'admin', 'teacher', 'recorder', 'student']
+        && d.label is string && d.label.size() <= 80
+        && strOrNull(optNull(d, 'studentId')) && strOrNull(optNull(d, 'groupId')) && strOrNull(optNull(d, 'titleId'))
+        && d.active == true && d.createdBy == uid()
+        && (!('at' in d) || d.at is number);
+    }
+
+    // ---------- entries ----------
+    match /entries/{id} {
+      allow read: if isMember();
+      // dev: unrestricted (backup import / resets). Everyone else: validated below.
+      allow create: if isDev() || validEntry(request.resource.data);
+      allow update: if isMember() && (validVoid(resource.data, request.resource.data) || validApprove(resource.data, request.resource.data));
+      allow delete: if isDev();
+    }
+    function validEntry(d) {
+      let m = me();
+      let rule = docOf('rules', d.ruleId);
+      return m.role in ['recorder', 'teacher', 'admin']
+        && d.keys().hasOnly(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy'])
+        && d.keys().hasAll(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy'])
+        && d.by == uid() && d.at == request.time && d.byName == m.name
+        && d.cycleId == docOf('config', 'main').currentCycleId
+        && d.groupId is string && strOrNull(d.studentId)
+        && d.unit is number && d.qty is int && d.qty >= 1 && d.points == d.unit * d.qty
+        && rule.get('active', true) != false
+        && d.unit == rule.points && d.cat == rule.cat && d.ruleName == rule.name
+        && (rule.get('scope', 'student') != 'group' || d.studentId == null)
+        && (rule.get('scope', 'student') != 'student' || d.studentId != null)
+        && (rule.get('perUnit', false) == true || d.qty == 1)
+        && d.note is string && d.note.size() <= 500
+        && d.voidReason == '' && d.voidBy == ''
+        && (m.role == 'recorder' ? recorderOk(d, m) : d.status == 'ok');
+    }
+    // recorder: own tổ only; student (if any) must belong to that tổ; points<0 -> ok, points>0 -> pending
+    function recorderOk(d, m) {
+      return d.groupId == m.groupId
+        && (d.studentId == null || docOf('students', d.studentId).groupId == d.groupId)
+        && d.status == (d.points > 0 ? 'pending' : 'ok');
+    }
+    // void: only status/voidReason/voidBy; author (non-student) or teacher/admin/dev; reason required
+    function validVoid(old, nw) {
+      return nw.diff(old).affectedKeys().hasOnly(['status', 'voidReason', 'voidBy'])
+        && old.status in ['ok', 'pending'] && nw.status == 'void'
+        && nw.voidBy == uid() && nw.voidReason is string && nw.voidReason.size() > 0 && nw.voidReason.size() <= 500
+        && (isStaff() || (myRole() == 'recorder' && old.by == uid()));
+    }
+    // approve: pending -> ok, teacher/admin/dev, never the author
+    function validApprove(old, nw) {
+      return nw.diff(old).affectedKeys().hasOnly(['status'])
+        && old.status == 'pending' && nw.status == 'ok'
+        && isStaff() && old.by != uid();
+    }
+  }
+}
