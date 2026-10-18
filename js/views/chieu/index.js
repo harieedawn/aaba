@@ -10,7 +10,9 @@ import { buildSlides } from './build.js';
 import { renderSlide, maskNames } from './slides.js';
 import { renderFinale } from './finale.js';
 import { bindInput } from './input.js';
+import { fit, watchFit } from './fit.js';
 
+let touched = false; // first tap of a session shows the corner buttons for 3s (touch devices)
 function toggleFs(root) {
   try {
     const d = document;
@@ -25,7 +27,7 @@ export default function chieu({ params: [key] }) {
   const M = {}, exit = () => navigate(`/tongket/tuan/${key}`);
   let slides = [], i = 0, k = 0, fin = null, hide = false, gone = false, tok = 0, started = false;
   const ready = () => ['config', 'groups', 'students'].every(c => M[c] !== undefined);
-  const btn = (cls, label, kids, on) => h('button', { class: `ch-btn ch-ctl ${cls}`, type: 'button', 'aria-label': label, onclick: on }, kids);
+  const btn = (cls, label, ic, on) => h('div', { class: `ch-cz ${cls}` }, h('button', { class: 'ch-btn ch-ctl', type: 'button', title: label, 'aria-label': label, onclick: on }, icon(ic, 16)));
   const box = h('div', { class: 'ch-box' }), dots = h('span', { class: 'ch-dots' }), cnt = h('span', { class: 'ch-cnt2' });
   // Edge hit-zones: whole zone = prev/next (click bubbles from the arrow); arrow is only visible on zone hover / keyboard focus.
   const zone = (cls, label, ic, on) => h('div', { class: `ch-zone ${cls}`, onclick: on }, h('button', { class: 'ch-nav', type: 'button', 'aria-label': label }, icon(ic, 22)));
@@ -33,7 +35,7 @@ export default function chieu({ params: [key] }) {
   const bPrev = zPrev.firstChild, bNext = zNext.firstChild;
   const ind = h('span', { class: 'ch-ind', hidden: true }, 'Đang ẩn tên · nhấn H để hiện');
   const root = h('div', { class: 'ch', role: 'dialog', 'aria-label': 'Trình chiếu' }, box,
-    btn('ch-exit', 'Thoát', [icon('x', 24), 'Thoát'], exit), btn('ch-fsb', 'Toàn màn hình (F)', icon('expand', 24), () => toggleFs(root)),
+    btn('ch-czl', 'Thoát', 'x', exit), btn('ch-czr', 'Toàn màn hình (F)', 'expand', () => toggleFs(root)),
     zPrev, zNext, ind, h('div', { class: 'ch-foot' }, dots, cnt));
 
   function nav() {
@@ -44,7 +46,7 @@ export default function chieu({ params: [key] }) {
   function paint(dir) {
     cancelAll(); const s = slides[i]; k = 0; fin = s.type === 'finale' ? renderFinale(s) : null;
     const el = fin ? fin.el : renderSlide(s);
-    put(box, el); maskNames(el, hide);
+    put(box, el); fit(el); maskNames(el, hide);
     if (dir < 0) play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 }); else enter(s, el);
     nav();
   }
@@ -67,13 +69,16 @@ export default function chieu({ params: [key] }) {
       h('div', { class: 'ch-msgbtns' }, h('button', { class: 'ch-btn', type: 'button', onclick: () => load(true) }, 'Thử lại'), h('button', { class: 'ch-btn ch-btn2', type: 'button', onclick: exit }, 'Thoát')))));
   }
 
+  let tt = 0;
+  root.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch' || touched) return; touched = true; root.classList.add('ch-tshow'); tt = setTimeout(() => root.classList.remove('ch-tshow'), 3000); });
+  const unfit = watchFit(() => box.firstElementChild);
   const unbind = bindInput({ root, next: advance, prev: back, fs: () => toggleFs(root), hide: toggleHide, exit });
   document.body.append(root); document.body.classList.add('chieu-on');
   const subs = ['config', 'groups', 'students'].map(c => store.on(c, v => { M[c] = v; if (ready() && !started) { started = true; load(false); } }));
   put(box, h('div', { class: 'ch-skel', 'aria-busy': 'true' }, h('i'), h('i'), h('i')));
   nav();
   return { el: h('div'), destroy() {
-    gone = true; cancelAll(); unbind(); subs.forEach(u => u()); root.remove();
+    gone = true; cancelAll(); unbind(); unfit(); clearTimeout(tt); subs.forEach(u => u()); root.remove();
     if (!document.querySelector('.ch')) document.body.classList.remove('chieu-on');
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignore */ }
   } };

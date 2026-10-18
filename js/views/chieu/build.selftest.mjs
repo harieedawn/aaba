@@ -17,7 +17,7 @@ assert.deepEqual(sl.slice(1, 5).map(s => s.group.name), ['Tổ 1', 'Tổ 2', 'T�
 assert.ok(sl.slice(1, 5).every(s => s.empty && s.lines.length === 0 && !s.star && s.pending === 0));
 assert.equal(sl[0].className, '11A3'); assert.equal(sl[0].weekLabel, 'T7 17/10 → T6 23/10');
 let fin = sl[5];
-assert.equal(fin.tie, true); assert.equal(fin.first.length, 4); assert.equal(fin.steps.length, 1); assert.equal(fin.steps[0].kind, 'hero');
+assert.equal(fin.tie, true); assert.equal(fin.first.length, 4); assert.equal(fin.steps.length, 2); assert.equal(fin.steps[0].kind, 'hero'); assert.equal(fin.steps[1].kind, 'board');
 assert.match(fin.steps[0].line, /đồng hạng nhất tuần$/);
 
 // 2. one tổ empty (g3 has nothing)
@@ -30,12 +30,12 @@ assert.equal(sl[1].star.name, 'HS g1.1'); assert.equal(sl[1].plusSum, 5); assert
 sl = run([E({ groupId: 'g1', points: 10 }), E({ groupId: 'g2', points: -5 }), E({ groupId: 'g3', points: -5 }), E({ groupId: 'g4', points: -9 })]);
 fin = sl.at(-1);
 assert.deepEqual(fin.rows.map(r => [r.group.name, r.rank]), [['Tổ 2', 2], ['Tổ 3', 2], ['Tổ 4', 4]]);
-assert.deepEqual(fin.steps.map(s => s.kind), ['row', 'row', 'row', 'hero']);
+assert.deepEqual(fin.steps.map(s => s.kind), ['row', 'row', 'row', 'hero', 'board']);
 assert.deepEqual(fin.steps.slice(0, 3).map(s => s.rows[0].group.name), ['Tổ 4', 'Tổ 3', 'Tổ 2']);
 assert.equal(fin.steps[3].line, 'Tổ 1 xếp hạng nhất tuần'); assert.equal(fin.tie, false);
 assert.equal(fin.first[0].total, 310); assert.equal(fin.first[0].cats.length, 3);
 sl = run([E({ groupId: 'g2', points: 4 }), E({ groupId: 'g3', points: 4 })]);
-assert.equal(sl.at(-1).steps.at(-1).line, 'Tổ 2 · Tổ 3 đồng hạng nhất tuần');
+assert.equal(sl.at(-1).steps.at(-2).line, 'Tổ 2 · Tổ 3 đồng hạng nhất tuần'); assert.deepEqual(sl.at(-1).steps.at(-2).lines, ['Tổ 2 đồng hạng nhất tuần', 'Tổ 3 đồng hạng nhất tuần']);
 
 // 4. voided / pending excluded
 const es = [
@@ -76,11 +76,11 @@ assert.equal(run([E({ ruleName: 'Q', points: -1 })]).find(s => s.type === 'top')
 
 // 7. 4 and 8 groups (numeric order, 10 after 2), 8 groups: 7 non-first rows + hero
 sl = run([E({ groupId: 'g1', points: 3 })], mk(4));
-assert.equal(sl.filter(s => s.type === 'group').length, 4); assert.equal(sl.at(-1).steps.length, 4);
+assert.equal(sl.filter(s => s.type === 'group').length, 4); assert.equal(sl.at(-1).steps.length, 5);
 const g8 = [...mk(8)].reverse(); g8.forEach(g => delete g.order); g8.push({ id: 'g10', name: 'Tổ 10', color: 'teal' });
 sl = run([E({ groupId: 'g1', points: 3 }), E({ groupId: 'g8', points: -2 })], g8);
 assert.deepEqual(sl.filter(s => s.type === 'group').map(s => s.group.name), ['Tổ 1', 'Tổ 2', 'Tổ 3', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 10']);
-assert.equal(sl.at(-1).steps.length, 9); assert.equal(sl.at(-1).rows.length, 8); assert.equal(sl.at(-1).rows.at(-1).group.name, 'Tổ 8');
+assert.equal(sl.at(-1).steps.length, 10); assert.equal(sl.at(-1).rows.length, 8); assert.equal(sl.at(-1).rows.at(-1).group.name, 'Tổ 8');
 assert.equal(run([], []).length, 1); // no groups: title only
 
 // 8. density (<=3 large, 4-5 medium, 6 compact) and current week (isCurrent/daysLeft)
@@ -89,11 +89,11 @@ assert.deepEqual([0, 3, 4, 5, 6, 9].map(n => run(lin(n))[1].density), ['large', 
 const cur = (entries, daysLeft, groups = mk(4)) => buildSlides({ entries, groups, students, config, weekLabel: 'x', isCurrent: true, daysLeft });
 sl = cur([E({ groupId: 'g1', points: 5 })], 3);
 assert.equal(sl[0].tag, 'Tạm tính · còn 3 ngày'); assert.equal(sl[0].isCurrent, true);
-assert.equal(sl.at(-1).steps.at(-1).line, 'Tổ 1 đang dẫn đầu (tạm tính)');
+assert.equal(sl.at(-1).steps.at(-2).line, 'Tổ 1 đang dẫn đầu (tạm tính)');
 assert.equal(cur([], 0)[0].tag, 'Tạm tính · hôm nay chốt tuần');
-assert.equal(cur([], 2).at(-1).steps.at(-1).line, 'Tổ 1 · Tổ 2 · Tổ 3 · Tổ 4 đồng hạng dẫn đầu (tạm tính)');
-assert.equal(run([])[0].tag, ''); assert.match(run([E({ groupId: 'g1', points: 5 })]).at(-1).steps.at(-1).line, /xếp hạng nhất tuần$/);
-for (const n of [2, 4, 8]) { const f = run([E({ groupId: 'g1', points: 2 })], mk(n)).at(-1); assert.equal(f.first.length + f.rows.length, n); assert.equal(f.steps.length, n); } // 2/4/8 groups (1 tie-free winner)
+assert.equal(cur([], 2).at(-1).steps.at(-2).line, 'Tổ 1 · Tổ 2 · Tổ 3 · Tổ 4 đồng hạng dẫn đầu (tạm tính)');
+assert.equal(run([])[0].tag, ''); assert.match(run([E({ groupId: 'g1', points: 5 })]).at(-1).steps.at(-2).line, /xếp hạng nhất tuần$/);
+for (const n of [2, 4, 8]) { const f = run([E({ groupId: 'g1', points: 2 })], mk(n)).at(-1); assert.equal(f.first.length + f.rows.length, n); assert.equal(f.steps.length, n + 1); assert.deepEqual(f.steps.map(s => s.kind), [...Array(n - 1).fill('row'), 'hero', 'board']); assert.equal(f.steps.at(-1).rows.length, n); assert.equal(f.board.length, n); assert.equal(f.board[0].rank, 1); } // 2/4/8 groups (1 tie-free winner)
 console.log('chieu build selftest OK');
 
 // 9. podium layout: order 4th…1st left→right, ties share a height level, rank 1 tallest, 2/4/8 groups
@@ -103,11 +103,15 @@ for (const n of [2, 4, 8]) {
   const c = pod(n, [E({ groupId: 'g2', points: -1 }), E({ groupId: 'g3', points: -2 }), E({ groupId: 'g4', points: -3 }), E({ groupId: 'g5', points: -4 }), E({ groupId: 'g6', points: -5 }), E({ groupId: 'g7', points: -6 }), E({ groupId: 'g8', points: -7 })].filter(e => +e.groupId.slice(1) <= n));
   assert.equal(c.length, n); assert.equal(c.at(-1).rank, 1); assert.equal(c.at(-1).h, 1);
   assert.ok(c.every((x, i) => i === 0 || x.rank <= c[i - 1].rank)); assert.ok(c.every((x, i) => i === 0 || x.h >= c[i - 1].h));
-  assert.ok(c.every(x => x.h >= 0.45 && x.h <= 1));
+  assert.ok(c.every(x => x.h >= 0.35 && x.h <= 1));
 }
 const tc = pod(4, [E({ groupId: 'g2', points: -5 }), E({ groupId: 'g3', points: -5 }), E({ groupId: 'g4', points: -9 })]);
 assert.deepEqual(tc.map(x => [x.group.name, x.rank]), [['Tổ 4', 4], ['Tổ 2', 2], ['Tổ 3', 2], ['Tổ 1', 1]]);
 assert.equal(tc[1].h, tc[2].h); assert.ok(tc[0].h < tc[1].h && tc[1].h < tc[3].h);
 const allTie = run([], mk(3)).at(-1).cols; assert.ok(allTie.length === 3 && allTie.every(x => x.h === 1 && x.rank === 1));
 assert.equal(podiumLayout([{ rank: 1, group: { id: 'a' } }], []).length, 1);
+// 10. finale steps with ties: n_nonwinning rows + hero + board; board lists every tổ, rank-sorted, ties share rank; heights ~ total (min .35)
+for (const n of [2, 4, 8]) { const f = run([E({ groupId: 'g1', points: 5 }), E({ groupId: 'g2', points: 5 })], mk(n)).at(-1); assert.equal(f.first.length, 2); assert.equal(f.steps.length, n - 2 + 2); assert.equal(f.board.length, n); assert.ok(f.board.every((r, i) => i === 0 || r.rank >= f.board[i - 1].rank)); assert.equal(f.board[0].rank, f.board[1].rank); }
+const ph = pod(4, [E({ groupId: 'g2', points: -200 })]); assert.equal(ph.at(-1).h, 1); assert.equal(ph.find(x => x.group.name === 'Tổ 2').h, 0.35);
+assert.equal(run([], mk(2)).at(-1).isCurrent, false);
 console.log('podium selftest OK');

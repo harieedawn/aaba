@@ -11,7 +11,7 @@ export function bindInput({ root, next, prev, fs, hide, exit }) {
   const onDown = e => { if (e.button > 0) return; down = true; x0 = e.clientX; y0 = e.clientY; wake(); };
   const onUp = e => {
     if (!down) return; down = false;
-    if (e.target.closest?.('button,.ch-msg,.ch-zone')) return;
+    if (e.target.closest?.('button,.ch-msg,.ch-zone,.ch-cz')) return;
     const dx = e.clientX - x0, dy = e.clientY - y0;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) (dx < 0 ? next : prev)();
     else if (Math.abs(dx) < 12 && Math.abs(dy) < 12) (e.pointerType === 'touch' && e.clientX < innerWidth * 0.25 ? prev : next)();

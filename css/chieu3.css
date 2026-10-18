@@ -1,0 +1,65 @@
+/* Trình chiếu v3: fit-to-screen (--fit via fit.js), type scale, footer lane, quiet controls, tổ + Nổi bật layout. Solid fills only; motion = transform/opacity. */
+.ch{--m:min(1vw,1.7778dvh);--s0:clamp(8px,calc(5px + var(--m)*.62),18px);--s:var(--s0);--lane:28px}
+@media (max-width:899px),(orientation:portrait){.ch{--s0:clamp(5px,min(2.4vw,1.2dvh),15px);--s:var(--s0)}}
+.ch-s{--s:calc(var(--s0)*var(--fit,1));font-size:max(12px,calc(var(--s)*2.2));overflow:hidden}
+/* footer lane: content can never enter; dots + counter live only here */
+.ch-box{bottom:calc(env(safe-area-inset-bottom,0px) + var(--lane))}
+.ch-foot{bottom:env(safe-area-inset-bottom,0px);height:var(--lane);gap:8px;opacity:.6}
+.ch-dots{gap:6px}.ch-dot{width:6px;height:6px}.ch-cnt2{font-size:11px}
+.ch-ind{bottom:calc(env(safe-area-inset-bottom,0px) + 5px);padding:1px 8px;font-size:11px;border-width:1px}
+.ch-main{padding-bottom:calc(var(--s)*2.4)}.ch-top{padding-bottom:calc(var(--s)*2.4)}.pd{padding-bottom:calc(var(--s)*1.6)}.ch-hint{bottom:calc(var(--s)*2.5)}
+/* quiet controls: 72px corner hit-zones, 32px round icon buttons, invisible until hover / focus (touch: 3s after first tap) */
+.ch-cz{position:absolute;top:env(safe-area-inset-top,0px);width:72px;height:72px;z-index:3;display:flex;align-items:center;justify-content:center}
+.ch-czl{left:env(safe-area-inset-left,0px)}.ch-czr{right:env(safe-area-inset-right,0px)}
+.ch-cz .ch-ctl{position:static;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border-radius:50%;opacity:0;transition:opacity .2s}
+.ch-cz .ch-ctl svg{width:16px;height:16px}
+.ch-cz .ch-ctl:focus-visible{opacity:1}
+@media (hover:hover) and (pointer:fine){.ch-cz:hover .ch-ctl{opacity:1}}
+.ch-tshow .ch-cz .ch-ctl{opacity:1;pointer-events:auto}
+/* tổ slide */
+.ch-lines.two{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(var(--s)*2.4);align-content:start}
+.ch-trim{display:none!important}
+.ch-more[hidden]{display:none}
+.ch-star{margin-top:auto;display:flex;flex-direction:column;align-items:stretch;gap:calc(var(--s)*.3);padding:calc(var(--s)*1) calc(var(--s)*2)}
+.ch-sl{color:var(--text-2);font-size:max(11px,calc(var(--s)*1.5));line-height:1.2}
+.ch-sr{display:flex;align-items:baseline;justify-content:space-between;gap:calc(var(--s)*1.4);min-width:0}
+.ch-sn{min-width:0;font-size:calc(var(--s)*2.8);line-height:1.15}.ch-sn .ch-nm{white-space:normal}
+.ch-sr .ch-amt{font-size:calc(var(--s)*2.8);margin:0;white-space:nowrap}
+/* Nổi bật: equal cards, centred content, 2-line rows (name + amount / tổ chip) */
+.ch-cols{align-items:stretch}
+.ch-col{display:flex;flex-direction:column;justify-content:center;gap:calc(var(--s)*2);overflow:visible;min-height:0}
+.ch-col h3{font-size:calc(var(--s)*2.8)}
+.ch-col .ch-ol{margin:0;gap:calc(var(--s)*2.2)}
+.ch-ol li{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:calc(var(--s)*1.6);row-gap:calc(var(--s)*.5);align-items:baseline;min-width:0}
+.ch-ol .ch-rn{grid-area:1/1;font-size:calc(var(--s)*3.4);line-height:1.15}
+.ch-ol .ch-amt,.ch-ol .ch-cnt{grid-area:1/2;margin:0;font-size:calc(var(--s)*3.4);white-space:nowrap}
+.ch-ol .ch-gchip{grid-area:2/1;justify-self:start}
+.ch-ol li.g-blue,.ch-ol li[class*=" g-"],.ch-ol li[class^="g-"]{border-left:calc(var(--s)*.7) solid var(--gc);padding-left:calc(var(--s)*1.4)}
+/* portrait: colour band shrinks with --fit */
+@media (max-width:899px),(orientation:portrait){
+.ch-side{min-height:calc(clamp(64px,13dvh,160px)*var(--fit,1))}
+.ch-main,.ch-top,.pd{padding-bottom:calc(var(--s)*2)}
+.ch-lines.two{display:flex}
+}
+/* finale v3: lean podium columns (rank, tile, name, total), hero card with its line, full ranking board */
+.pd-col{min-height:min-content}.pd-in{overflow:visible;justify-content:flex-start}.pd-hero{overflow:hidden}.pd-area{overflow:hidden}
+.pd-hcard .pd-hline{margin:0;color:var(--text);font-size:calc(var(--s)*2.2);line-height:1.2;font-weight:600}
+.bd{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;gap:calc(var(--s)*1.6);padding:calc(var(--s)*2.6) max(calc(var(--s)*4),var(--zw)) calc(var(--s)*1.6)}
+.bd-title{margin:0;flex:none;font-size:calc(var(--s)*3.6);font-weight:700}
+.bd-rows{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:calc(var(--s)*1)}
+.bd-row{flex:1 1 0;min-height:min-content;max-height:calc(var(--s)*10);min-width:0;display:grid;grid-template-columns:calc(var(--s)*3.2) calc(var(--s)*5.2) minmax(0,1fr) auto auto;align-items:center;column-gap:calc(var(--s)*1.8);padding:calc(var(--s)*.8) calc(var(--s)*2);background:var(--surface);border:2px solid var(--border);border-radius:var(--r-m)}
+.bd-row.win{background:var(--gc);color:var(--go);border-color:var(--gc)}
+.bd-rk{font-size:calc(var(--s)*3);font-weight:700;text-align:center;color:var(--text-2)}.bd-row.win .bd-rk{color:var(--go)}
+.bd-tile{width:calc(var(--s)*5.2);height:calc(var(--s)*5.2);font-size:calc(var(--s)*2.6)}.bd-row.win .bd-tile{background:var(--go);color:var(--gc)}
+.bd-nm{display:flex;align-items:center;gap:calc(var(--s)*1);min-width:0;font-size:calc(var(--s)*3);line-height:1.15;overflow-wrap:break-word}
+.bd-crown{display:inline-flex;flex:none}.bd-crown svg{width:calc(var(--s)*2.6);height:calc(var(--s)*2.6);fill:#FFD23F;stroke:#1F2430;stroke-width:1.6}
+.bd-cats{display:flex;gap:calc(var(--s)*3)}
+.bd-cat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}.bd-cat i{font-style:normal;font-size:max(11px,calc(var(--s)*1.5));color:var(--text-2)}.bd-row.win .bd-cat i{color:var(--go)}.bd-cat b{font-size:calc(var(--s)*2.4);font-weight:600}
+.bd-tot{font-size:calc(var(--s)*4.6);line-height:1;text-align:right;min-width:calc(var(--s)*8);font-weight:700}
+@media (hover:hover) and (pointer:fine){.bd-row{transition:transform .15s ease-out}.bd-row:hover{transform:translateY(-2px)}}
+@media (max-width:899px),(orientation:portrait){
+.bd{padding:calc(var(--s)*2) max(calc(var(--s)*3),var(--zw)) calc(var(--s)*1.6)}
+.bd-row{max-height:calc(var(--s)*14);grid-template-columns:calc(var(--s)*3.4) calc(var(--s)*5.5) minmax(0,1fr) auto;grid-template-areas:"rk tile nm tot" "rk tile cats cats";row-gap:calc(var(--s)*.3);padding:calc(var(--s)*.8) calc(var(--s)*1.6)}
+.bd-rk{grid-area:rk}.bd-tile{grid-area:tile;width:calc(var(--s)*5.5);height:calc(var(--s)*5.5)}.bd-nm{grid-area:nm}.bd-tot{grid-area:tot;font-size:calc(var(--s)*4);min-width:0}
+.bd-cats{grid-area:cats;gap:calc(var(--s)*2);flex-wrap:wrap}.bd-cat{flex-direction:row;align-items:baseline;gap:.4em}.bd-cat i,.bd-cat b{font-size:max(11px,calc(var(--s)*1.9))}
+}

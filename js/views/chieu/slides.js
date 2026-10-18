@@ -6,7 +6,7 @@ export const tileTxt = n => ((n || '?').match(/\d+/) || [(n || '?')[0]])[0];
 const words = t => t.split(' ').flatMap((w, i) => [i ? ' ' : '', h('span', { class: 'ch-w', 'aria-hidden': 'true' }, w)]);
 export const nm = name => h('span', { class: 'ch-nm', 'data-n': name }, name);
 export function maskNames(root, hide) { root.querySelectorAll('.ch-nm').forEach(e => { e.textContent = hide ? '·' : e.dataset.n; }); }
-const names = list => [...list.slice(0, 6).flatMap((n, i) => [i ? ', ' : '', nm(n)]), list.length > 6 ? ` +${list.length - 6}` : ''];
+const names = list => [...list.slice(0, 4).flatMap((n, i) => [i ? ', ' : '', nm(n)]), list.length > 4 ? ` +${list.length - 4}` : ''];
 export const plus = n => (n > 0 ? fmtPts(n) : '0'), minus = n => (n > 0 ? MINUS + fmtNum(n) : '0');
 
 function titleSlide(s) {
@@ -25,8 +25,8 @@ function groupSlide(s) {
         h('span', { class: 'ch-rn' }, l.ruleName + (l.count > 1 ? ` ×${l.count}` : '')),
         h('b', { class: 'ch-amt ' + (l.sign > 0 ? 'p' : 'n') }, l.sign > 0 ? plus(l.points) : minus(-l.points)),
         l.names.length > 0 && h('span', { class: 'ch-nl' }, ...names(l.names))))),
-      s.more > 0 && h('p', { class: 'ch-more' }, `+ ${s.more} mục khác`),
-      s.star && h('div', { class: 'ch-star' }, h('span', null, 'Bạn nổi bật của tổ'), h('b', null, nm(s.star.name)), h('b', { class: 'ch-amt p', 'data-v': s.star.net, 'data-f': 'p' }, plus(s.star.net)))];
+      h('p', { class: 'ch-more', 'data-n': s.more, hidden: s.more <= 0 }, `+ ${s.more} mục khác`),
+      s.star && h('div', { class: 'ch-star' }, h('span', { class: 'ch-sl' }, 'Bạn nổi bật của tổ'), h('div', { class: 'ch-sr' }, h('b', { class: 'ch-sn' }, nm(s.star.name)), h('b', { class: 'ch-amt p', 'data-v': s.star.net, 'data-f': 'p' }, plus(s.star.net))))];
   return h('section', { class: `ch-s ch-group g-${s.group.color}`, 'data-density': s.density || 'medium' },
     h('div', { class: 'ch-side' }, h('h2', { class: 'ch-gname', 'aria-label': s.group.name }, ...words(s.group.name))),
     h('div', { class: 'ch-main' }, ...body, s.pending > 0 && h('p', { class: 'ch-pend' }, `${s.pending} điểm đang chờ xác nhận`)));
@@ -36,7 +36,7 @@ function topSlide(s) {
   const col = (t, kids) => h('div', { class: 'ch-col' }, h('h3', null, t), kids);
   const cols = [
     s.rules.length && col('Hay bị trừ nhất', h('ol', { class: 'ch-ol' }, s.rules.map(r => h('li', null, h('span', { class: 'ch-rn' }, r.name), h('b', { class: 'ch-cnt', 'data-v': r.count, 'data-f': 'c' }, `${r.count} lần`))))),
-    s.students.length && col('Bạn nổi bật', h('ol', { class: 'ch-ol' }, s.students.map(x => h('li', null, h('span', { class: 'ch-rn' }, nm(x.name)),
+    s.students.length && col('Bạn nổi bật', h('ol', { class: 'ch-ol' }, s.students.map(x => h('li', { class: `g-${x.group.color}` }, h('span', { class: 'ch-rn' }, nm(x.name)),
       h('span', { class: `ch-gchip g-${x.group.color}` }, x.group.name), h('b', { class: 'ch-amt p', 'data-v': x.net, 'data-f': 'p' }, plus(x.net)))))),
   ].filter(Boolean);
   return h('section', { class: 'ch-s ch-top' }, h('h2', { class: 'ch-h2' }, 'Nổi bật'), h('div', { class: 'ch-cols' + (cols.length < 2 ? ' one' : '') }, cols));

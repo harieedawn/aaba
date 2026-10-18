@@ -44,11 +44,11 @@ function topSlide(entries, groups, sm, net) {
   return rules.length || students.length ? { type: 'top', rules, students } : null;
 }
 
-// Podium columns left→right = last place … 1st; ties share a height level; h = fraction of the tallest column.
+// Podium columns left→right = last place … 1st; h = total / highest total (min 0.35, so ties share a height).
 export function podiumLayout(first, rest) {
-  const all = [...first, ...rest], ranks = [...new Set(all.map(r => r.rank))], L = ranks.length, min = L <= 5 ? 0.58 : 0.45;
+  const all = [...first, ...rest], ranks = [...new Set(all.map(r => r.rank))], mx = Math.max(0, ...all.map(r => r.total || 0));
   return all.map((r, i) => ({ r, i })).sort((a, b) => b.r.rank - a.r.rank || a.i - b.i)
-    .map(({ r }) => ({ ...r, level: ranks.indexOf(r.rank), h: L === 1 ? 1 : +(1 - ranks.indexOf(r.rank) * (1 - min) / (L - 1)).toFixed(3) }));
+    .map(({ r }) => ({ ...r, level: ranks.indexOf(r.rank), h: mx > 0 ? +Math.min(1, Math.max(0.35, (r.total || 0) / mx)).toFixed(3) : 1 }));
 }
 
 function finaleSlide(groups, entries, cats, isCurrent) {
@@ -57,10 +57,10 @@ function finaleSlide(groups, entries, cats, isCurrent) {
   }));
   const first = rows.filter(r => r.rank === 1), rest = rows.filter(r => r.rank !== 1);
   const tie = first.length > 1, names = first.map(r => r.group.name).join(' · ');
-  const line = isCurrent ? (tie ? `${names} đồng hạng dẫn đầu (tạm tính)` : `${names} đang dẫn đầu (tạm tính)`) : (tie ? `${names} đồng hạng nhất tuần` : `${names} xếp hạng nhất tuần`);
-  // reveal steps: non-first rows from last place up, then one final step with the hero card(s)
-  const steps = [...[...rest].reverse().map(r => ({ kind: 'row', rows: [r] })), { kind: 'hero', rows: first, tie, line }];
-  return { type: 'finale', rows: rest, first, tie, steps, cols: podiumLayout(first, rest) };
+  const one = n => (isCurrent ? (tie ? `${n} đồng hạng dẫn đầu (tạm tính)` : `${n} đang dẫn đầu (tạm tính)`) : (tie ? `${n} đồng hạng nhất tuần` : `${n} xếp hạng nhất tuần`)), line = one(names);
+  // steps: non-winning rows from last place up to 2nd, ONE hero step (winner / tied winners, line inside each card), ONE board step (full ranking)
+  const steps = [...[...rest].reverse().map(r => ({ kind: 'row', rows: [r] })), { kind: 'hero', rows: first, tie, line, lines: first.map(r => one(r.group.name)) }, { kind: 'board', rows }];
+  return { type: 'finale', isCurrent, rows: rest, first, tie, steps, board: rows, cols: podiumLayout(first, rest) };
 }
 
 export function buildSlides({ entries = [], groups = [], students = [], config = {}, weekLabel = '', isCurrent = false, daysLeft = 0 }) {

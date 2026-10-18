@@ -1,5 +1,5 @@
 // Trình chiếu: finale as a podium. Columns left→right = 4th…1st (heights by rank level, ties share one), revealed from last place up;
-// then a suspense beat and the hero step. Stacked/portrait: same DOM becomes a ranked list (best on top, revealed bottom-up).
+// then the hero step and finally the full ranking board (board.js). Stacked/portrait: same DOM becomes a ranked list (best on top, revealed bottom-up).
 import { h } from '../../ui/dom.js';
 import { fmtNum } from '../../format.js';
 import { icon } from '../../ui/icons.js';
@@ -7,33 +7,33 @@ import { reduced } from '../../ui/anim.js';
 import { play, count, later } from './motion.js';
 import { tileTxt } from './slides.js';
 import { tilt } from './hover.js';
+import { renderBoard } from './board.js';
 
 const stacked = () => matchMedia('(max-width:899px),(orientation:portrait)').matches;
 
 export function renderFinale(s) {
-  const total = s.steps.length, line = s.steps[total - 1].line, dense = s.cols.length > 5, win = new Set(s.first.map(r => r.group.id));
-  const stepOf = new Map(s.steps.slice(0, -1).map((st, j) => [st.rows[0].group.id, j]));
-  const cats = r => h('div', { class: 'pd-cats' }, r.cats.map(c => h('div', { class: 'pd-cat' }, h('span', null, c.name), h('b', null, fmtNum(c.value)))));
+  const total = s.steps.length, hero = s.steps[total - 2], hk = total - 1, dense = s.cols.length > 5, win = new Set(s.first.map(r => r.group.id));
+  const stepOf = new Map(s.steps.slice(0, -2).map((st, j) => [st.rows[0].group.id, j]));
   const cols = s.cols.map(r => {
     const tot = h('b', { class: 'pd-tot' }, '0'), bar = h('i', { class: 'pd-bar' });
-    const inn = h('div', { class: 'pd-in' }, h('span', { class: 'pd-rk' }, `Hạng ${r.rank}`), h('span', { class: 'ch-tile pd-tile' }, tileTxt(r.group.name)), h('b', { class: 'pd-name' }, r.group.name), tot, cats(r));
+    const inn = h('div', { class: 'pd-in' }, h('span', { class: 'pd-rk' }, `Hạng ${r.rank}`), h('span', { class: 'ch-tile pd-tile' }, tileTxt(r.group.name)), h('b', { class: 'pd-name' }, r.group.name), tot);
     return { r, tot, bar, inn, win: win.has(r.group.id), j: stepOf.get(r.group.id), el: h('div', { class: `pd-col ch-off g-${r.group.color}`, style: { '--h': r.h } }, bar, inn) };
   });
-  const cards = s.first.map(r => {
+  const cards = s.first.map((r, i) => {
     const rings = [0, 1, 2].map(() => h('i', { class: 'pd-ring' })), tot = h('b', { class: 'pd-htot' }, fmtNum(r.total));
-    const name = h('span', { class: 'pd-hname' }, r.group.name), ul = h('i', { class: 'pd-ul' }), crown = h('span', { class: 'pd-crown' }, icon('crown', 24));
+    const name = h('span', { class: 'pd-hname' }, r.group.name), ul = h('i', { class: 'pd-ul' }), crown = h('span', { class: 'pd-crown' }, icon('crown', 24)), line = h('p', { class: 'pd-hline' }, hero.lines[i]);
     const card = h('div', { class: `pd-hcard g-${r.group.color}` }, crown, h('div', { class: 'pd-tilew' }, ...rings, h('span', { class: 'ch-tile pd-htile' }, tileTxt(r.group.name))),
-      name, ul, tot, h('span', { class: 'pd-hcats' }, r.cats.map(c => `${c.name} ${fmtNum(c.value)}`).join(' · ')));
-    return { r, tot, rings, name, ul, crown, el: h('div', { class: 'pd-hw' }, card) };
+      name, ul, tot, line);
+    return { r, tot, rings, name, ul, crown, line, el: h('div', { class: 'pd-hw' }, card) };
   });
   const heroEl = h('div', { class: 'pd-hero ch-off' + (cards.length > 1 ? ' many' : ''), style: { '--hc': Math.min(cards.length, 4), '--hcs': cards.length > 2 ? 2 : 1 } },
-    h('div', { class: 'pd-hcards' }, cards.map(c => c.el)), h('p', { class: 'pd-hline' }, line));
-  const sus = h('div', { class: 'pd-sus ch-off', 'aria-live': 'polite' }, 'Tổ nào đứng nhất?'), dim = h('div', { class: 'pd-dim' });
+    h('div', { class: 'pd-hcards' }, cards.map(c => c.el)));
+  const dim = h('div', { class: 'pd-dim' }), bd = renderBoard(s);
   const hint = h('span', { class: 'pd-hint' }, 'Nhấn → để công bố');
   const el = h('section', { class: 'ch-s pd' + (dense ? ' dense' : '') },
     h('div', { class: 'pd-head' }, h('h2', { class: 'pd-title' }, 'Bảng xếp hạng'), h('span', { class: 'grow' }),
-      dense && h('span', { class: 'pd-leg' }, s.cols[0].cats.map(c => c.name).join(' · ')), hint),
-    h('div', { class: 'pd-area' }, cols.map(o => o.el), sus), dim, heroEl);
+      hint),
+    h('div', { class: 'pd-area' }, cols.map(o => o.el)), dim, heroEl, bd.el);
   tilt(el);
 
   const showCol = (o, anim, delay = 0, dur = 600) => {
@@ -46,7 +46,9 @@ export function renderFinale(s) {
   };
   const hideCol = o => { o.el.classList.add('ch-off'); count(o.tot, 0, 0); };
 
+  let hOut = null;
   function setHero(on, anim) {
+    if (hOut) { hOut.cancel(); hOut = null; }
     const was = !heroEl.classList.contains('ch-off');
     el.classList.toggle('is-hero', on); heroEl.classList.toggle('ch-off', !on);
     if (!on || was || !anim) return;
@@ -59,27 +61,20 @@ export function renderFinale(s) {
       play(c.crown, [{ opacity: 0, transform: 'translateY(-40px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: d + 550 });
       c.rings.forEach((r, j) => play(r, [{ opacity: 0, transform: 'scale(1)' }, { opacity: .85, transform: 'scale(1.4)', offset: .15 }, { opacity: 0, transform: 'scale(3.4)' }], { duration: 760, delay: d + 450 + j * 90 }));
       play(c.ul, [{ transform: 'scaleX(0)' }, { transform: 'none' }], { duration: 450, delay: d + 800 });
+      play(c.line, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: d + 1000 });
     });
-    play(heroEl.querySelector('.pd-hline'), [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: 1000 });
   }
-  const reveal = anim => { cols.filter(o => o.win).forEach(o => showCol(o, anim, 0, 650)); setHero(true, anim); };
-
-  let cur = 0, susA = null;
+  let cur = 0;
   function set(k) {
-    const old = cur, fwd = k > old; cur = k;
-    const heroOn = k === total, beat = heroOn && fwd && !reduced();
-    sus.classList.add('ch-off'); if (susA) { susA.cancel(); susA = null; }
-    cols.filter(o => !o.win).forEach(o => {
-      const on = o.j < k, was = !o.el.classList.contains('ch-off');
-      if (on && !was) showCol(o, fwd && !reduced()); else if (!on && was) hideCol(o);
-    });
-    if (!heroOn) { cols.filter(o => o.win && !o.el.classList.contains('ch-off')).forEach(hideCol); setHero(false); }
-    else if (!beat) reveal(false);
-    else {
-      sus.classList.remove('ch-off');
-      susA = play(sus, [{ opacity: .3 }, { opacity: 1 }], { duration: 450, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out', fill: 'none' });
-      later(() => { if (susA) { susA.cancel(); susA = null; } sus.classList.add('ch-off'); reveal(true); }, 900);
-    }
+    const old = cur, anim = k > old && !reduced(); cur = k;
+    cols.filter(o => !o.win).forEach(o => { const on = o.j < k, was = !o.el.classList.contains('ch-off'); if (on && !was) showCol(o, anim); else if (!on && was) hideCol(o); });
+    cols.filter(o => o.win).forEach(o => { const on = k >= hk, was = !o.el.classList.contains('ch-off'); if (on && !was) showCol(o, anim, 0, 650); else if (!on && was) hideCol(o); });
+    if (k === total) { // board: hero card out (300ms), board crossfades in over the podium and stays
+      if (anim && old === hk) {
+        hOut = play(heroEl, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.96)' }], { duration: 300, fill: 'forwards' });
+        later(() => heroEl.classList.add('ch-off'), 300); later(() => el.classList.remove('is-hero'), 520); bd.show(true, true, 150);
+      } else { setHero(false); bd.show(true, false); }
+    } else { bd.show(false); setHero(k === hk, anim); }
     hint.style.display = k === 0 ? '' : 'none';
   }
   set(0);
