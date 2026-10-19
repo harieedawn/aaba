@@ -6,7 +6,7 @@ import { emptyState, pageHeader, live, entryRow, reasonSheet, pendingSrc } from 
 import { toast } from '../ui/toast.js';
 import { getSession, can } from '../session.js';
 import { stagger } from '../ui/anim.js';
-import { act } from '../ui/act.js';
+import { act, saved } from '../ui/act.js';
 
 export default function review() {
   const body = h('div', { class: 'stack' });
@@ -22,7 +22,7 @@ export default function review() {
         ok: `Đã xác nhận ${fmtPts(e.points)} cho ${gm.get(e.groupId)?.name || ''}` }) }, 'Xác nhận');
       const reject = h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => reasonSheet({ title: 'Từ chối điểm này?',
         text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ bị thu hồi và không được tính.`, label: 'Từ chối',
-        onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã từ chối'); } }) }, 'Từ chối');
+        onSubmit: async r => { await store.voidEntry(e.id, r); toast(saved('Đã từ chối')); } }) }, 'Từ chối');
       out.push(h('section', { class: 'card rv' }, entryRow(e, { group: gm.get(e.groupId), student: sm.get(e.studentId) }),
         h('div', { class: 'rule-note muted' }, `Người ghi: ${e.byName}`, e.note ? `. Ghi chú: ${e.note}` : ''),
         own && h('div', { class: 'pend' }, 'Do bạn ghi, cần người khác xác nhận'), h('div', { class: 'row-btns' }, reject, approve)));

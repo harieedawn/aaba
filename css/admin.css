@@ -25,3 +25,5 @@ select.input{appearance:auto}
 .steps span.on{background:var(--primary)}
 .font-check{font-size:var(--fs-22);line-height:1.4}
 .is-dim{opacity:.3;pointer-events:none}
+/* teacher view-only: dim and block every action control inside the section */
+.is-readonly button,.is-readonly input,.is-readonly select,.is-readonly textarea,.is-readonly .btn,.is-readonly .icon-btn{pointer-events:none;opacity:.6}

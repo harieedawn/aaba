@@ -8,7 +8,7 @@ import { openSheet } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { getSession, can, role } from '../session.js';
 import { navigate } from '../router.js';
-import { act } from '../ui/act.js';
+import { act, saved, OFFLINE_SAVED } from '../ui/act.js';
 import { dateRow } from './add-date.js';
 import { takeDraft } from '../ui/draft.js';
 import { confirmSheet } from '../ui/form.js';
@@ -128,13 +128,13 @@ export default function add() {
     };
     function success(e) {
       const grp = D.groups.find(g => g.id === e.groupId), stu = D.students.find(s => s.id === e.studentId);
-      const title = h('h2', null, e.status === 'pending' ? 'Đã gửi, chờ xác nhận' : ed ? 'Đã lưu bản sửa' : 'Đã ghi điểm');
+      const title = h('h2', null, saved('') ? OFFLINE_SAVED : e.status === 'pending' ? 'Đã gửi, chờ xác nhận' : ed ? 'Đã lưu bản sửa' : 'Đã ghi điểm');
       put(cont, h('div', { class: 'success' }, h('div', { class: 'success-ico' }, icon('check', 40, 'check-draw')), title,
         h('p', { class: 'muted' }, `${fmtPts(e.points)} điểm cho ${grp?.name || ''}${stu ? `, ${stu.name}` : ''}`),
         h('div', { class: 'row-btns', style: { width: '100%', marginTop: '8px' } },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => sh.close() }, 'Xong'),
           h('button', { class: 'btn', type: 'button', onclick: () => { ed = null; dUi?.reset(); st = fresh(st.g); sIn.value = rIn.value = note.value = ''; put(cont, form); paintAll(); } }, 'Ghi tiếp'))));
-      if (!ed) toast(`${fmtPts(e.points)} cho ${grp?.name || ''}`, { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
+      if (!ed) toast(saved(`${fmtPts(e.points)} cho ${grp?.name || ''}`), { duration: 8000, action: { label: 'Hoàn tác', onClick: () =>
         act(async () => { await store.voidEntry(e.id, 'hoàn tác'); title.textContent = 'Đã hoàn tác'; }, { ok: 'Đã hoàn tác' }) } });
     }
     sh = openSheet({ title: ed ? 'Sửa điểm' : 'Ghi điểm', content: cont, onClose: () => { sh = null; if (!closing) navigate('/'); } });

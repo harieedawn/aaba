@@ -2,6 +2,7 @@
 import { h, put } from '../../ui/dom.js';
 import { icon } from '../../ui/icons.js';
 import { pageHeader, emptyState } from '../../ui/components.js';
+import { can } from '../../session.js';
 
 const SECTIONS = [
   ['nhom', 'Tổ & học sinh', 'user', () => import('./groups.js')],
@@ -15,9 +16,10 @@ export default function admin({ params }) {
   if (!sec) return { el: h('div', { class: 'view narrow' }, pageHeader('Quản lý'),
     h('div', { class: 'stack' }, SECTIONS.map(([k, label, ic]) => h('a', { class: 'row-link pressable', href: '#/quanly/' + k },
       icon(ic, 22), h('span', { class: 'grow' }, label), icon('chevron', 20))))) };
-  const body = h('div', { class: 'stack' });
+  const ro = can('manage') && !can('edit');
+  const body = h('div', { class: 'stack' + (ro ? ' is-readonly' : '') });
   let inner, dead = false;
   sec[3]().then(m => { if (dead) return; inner = m.default(); put(body, inner.el); })
     .catch(e => put(body, emptyState({ icon: 'x', title: 'Không mở được mục này', text: 'Có thể đã có bản cập nhật mới hoặc mạng yếu.', action: { label: 'Tải lại', onClick: () => location.reload() } })));
-  return { el: h('div', { class: 'view narrow' }, pageHeader(sec[1], { back: '#/quanly' }), body), destroy: () => { dead = true; inner?.destroy?.(); } };
+  return { el: h('div', { class: 'view narrow' }, pageHeader(sec[1], { back: '#/quanly' }), ro && h('div', { class: 'note muted' }, 'Bạn đang ở chế độ xem. Chỉ Ban cán sự và Quản trị mới sửa được.'), body), destroy: () => { dead = true; inner?.destroy?.(); } };
 }

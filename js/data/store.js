@@ -214,13 +214,22 @@ export async function importConfig(obj, mode = 'merge') {
   need(obj && obj.v === 1, 'File không đúng định dạng aaba');
   delete obj.duty; // tolerated: old exports may still carry a 'duty' key; silently ignored
   if (obj.config && !(typeof obj.config.baseScore === 'number' && Number.isFinite(obj.config.baseScore))) { obj.config = { ...obj.config }; delete obj.config.baseScore; } // files with no/invalid baseScore: legacy category bases still apply
+  let have = null, done = 0, todo = 0, skipped = 0;
+  const merging = mode !== 'replace' && obj.entries && typeof obj.entries === 'object';
+  if (merging) { have = new Set((await A.list('entries')).map(d => d.id)); const ids = Object.keys(obj.entries); todo = ids.filter(id => !have.has(id)).length; skipped = ids.length - todo; } // dev-only, once per import
+  try {
   for (const c of COLS.filter(k => obj[k] && typeof obj[k] === 'object')) {
     if (mode === 'replace') for (const d of await A.list(c)) await A.remove(c, d.id);
-    for (const [id, d] of Object.entries(obj[c])) await A.set(c, id, d, { raw: true });
+    for (const [id, d] of Object.entries(obj[c])) {
+      if (c === 'entries' && merging) { if (have.has(id)) continue; await A.set(c, id, d, { raw: true }); have.add(id); done++; continue; } // never overwrite an existing entry
+      await A.set(c, id, d, { raw: true });
+    }
   }
+  } catch (e) { if (merging) throw new Error(`Đã nhập ${done}/${todo}, hãy chạy lại nhập (Gộp) để hoàn tất`); throw e; }
   if (obj.config) await A.set('config', 'main', { ...obj.config, ...((obj.config.titles || obj.titles) && { titles: obj.config.titles || obj.titles }) }, { merge: mode !== 'replace' });
   const cfg = await A.get('config', 'main');
   if (cfg?.currentCycleId && !(await A.get('cycles', cfg.currentCycleId)))
     await A.set('cycles', cfg.currentCycleId, { n: parseInt(cfg.currentCycleId.slice(1)) || 1, start: Date.now(), end: null, closed: false, summary: [] });
+  return { added: done, skipped, merging };
 }
 export const signOut = async () => { await A.signOut(); setSession(null); };

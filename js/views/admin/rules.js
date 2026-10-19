@@ -24,8 +24,10 @@ function ruleSheet(r, cat, cats, all) {
         order: r?.order || all.reduce((m, x) => Math.max(m, x.order || 0), 0) + 1 });
     } });
 }
+const dis = (b, off) => { if (off) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); } return b; };
 // Swap positions i and i+d inside one category, reusing that category's order numbers.
 async function move(list, i, d) {
+  if (i + d < 0 || i + d >= list.length) return;
   const orders = list.map(r => r.order || 0).sort((a, b) => a - b).map((o, k, a) => (k && o <= a[k - 1] ? a[k - 1] + 1 : o));
   const arr = [...list]; [arr[i], arr[i + d]] = [arr[i + d], arr[i]];
   for (const [k, r] of arr.entries()) if (r.order !== orders[k]) await store.saveDoc('rules', r.id, { order: orders[k] });
@@ -37,7 +39,7 @@ export default function rulesView() {
     return h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, c.name), chip(`${list.length} tiêu chí`)),
       list.map((r, i) => arow({ name: r.name, off: r.active === false,
         sub: h('span', { class: 'inl' }, pointsChip(r.points), SCOPE[r.scope], r.perUnit && '/tv', r.hot && chip('thường dùng'), r.assumed && chip('tạm tính', 'warn'), r.active === false && 'tắt'),
-        actions: [iconBtn('chevron', 'Lên', () => act(() => move(list, i, -1)), 'up' + (i ? '' : ' is-dim')), iconBtn('chevron', 'Xuống', () => act(() => move(list, i, 1)), 'down' + (i < list.length - 1 ? '' : ' is-dim')),
+        actions: [dis(iconBtn('chevron', 'Lên', () => act(() => move(list, i, -1)), 'up' + (i ? '' : ' is-dim')), !i), dis(iconBtn('chevron', 'Xuống', () => act(() => move(list, i, 1)), 'down' + (i < list.length - 1 ? '' : ' is-dim')), i >= list.length - 1),
           iconBtn('edit', 'Sửa ' + r.name, () => ruleSheet(r, c.id, S.config.categories, S.rules))] })),
       h('button', { class: 'btn btn-ghost', type: 'button', style: { marginTop: '12px' }, onclick: () => ruleSheet(null, c.id, S.config.categories, S.rules) }, 'Thêm tiêu chí'));
   }));

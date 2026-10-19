@@ -45,7 +45,7 @@ function importCard() {
   ta.oninput = () => (ta.value.trim() ? parse(ta.value) : (prev.hidden = go.hidden = true));
   go.onclick = () => confirmSheet({ title: 'Nhập dữ liệu?', danger: mode.value === 'replace', label: 'Nhập',
     text: mode.value === 'replace' ? 'Dữ liệu cũ của các mục có trong file sẽ bị xóa rồi thay bằng file này.' : 'Dữ liệu trong file sẽ được gộp vào lớp hiện tại.',
-    onConfirm: async () => { await store.importConfig(obj, mode.value); toast('Đã nhập dữ liệu'); } });
+    onConfirm: async () => { const r = await store.importConfig(obj, mode.value); toast(r?.merging ? `Đã nhập ${r.added} dòng điểm mới, bỏ qua ${r.skipped} dòng đã có` : 'Đã nhập dữ liệu'); } });
   return h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Nhập cấu hình')),
     h('div', { class: 'form' }, field('File JSON', file), ta, err, prev, field('Cách nhập', mode), go));
 }

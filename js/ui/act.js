@@ -11,9 +11,12 @@ export function errMsg(e) {
   if (!c && e && e.constructor === Error && e.message) return e.message;
   return 'Có lỗi, thử lại';
 }
+export const OFFLINE_SAVED = 'Đã lưu trên máy, sẽ gửi khi có mạng';
+// success text: honest when the device is offline (write is queued, not yet sent)
+export const saved = msg => (typeof navigator !== 'undefined' && navigator.onLine === false ? OFFLINE_SAVED : msg);
 export async function act(fn, { btn, ok } = {}) {
   if (btn) { if (btn.disabled) return undefined; btn.disabled = true; }
-  try { const r = await fn(); if (ok) toast(ok); return r; }
+  try { const r = await fn(); if (ok) toast(saved(ok)); return r; }
   catch (e) { logError('act', e); toast(errMsg(e)); return undefined; }
   finally { if (btn) btn.disabled = false; }
 }

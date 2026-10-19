@@ -11,7 +11,7 @@ export function weeksFor(mode, key) { return (mode === 'quy' ? W.last3Months(key
 // returns {el, stop}; M = {config, groups, students}
 export function multiView({ mode, key, M, fresh }) {
   const weeks = weeksFor(mode, key), cur = W.weekStart(Date.now()), box = h('div', { class: 'stack' }, ...skeletonCards(3));
-  const D = new Map(), failed = new Set(); let stopped = false, sel = null;
+  const D = new Map(), failed = new Set(), trunc = new Set(); let stopped = false, sel = null;
   const total = id => weeks.reduce((s, w) => s + (D.get(w) ? groupScore(id, D.get(w).entries, M.config).total : 0), 0);
   function paint() {
     const rows = M.groups.map(g => ({ g, t: total(g.id) })).sort((a, b) => b.t - a.t || a.g.name.localeCompare(b.g.name, 'vi'));
@@ -22,7 +22,9 @@ export function multiView({ mode, key, M, fresh }) {
       h('thead', null, h('tr', null, h('th', null, 'Hạng'), h('th', null, 'Tổ'), weeks.map(th), h('th', null, 'Tổng'))),
       h('tbody', null, rows.map(r => h('tr', { class: `g-${r.g.color} pressable` + (sel === r.g.id ? ' on' : ''), tabindex: '0', onclick: () => { sel = sel === r.g.id ? null : r.g.id; paint(); } },
         h('td', null, r.rank), h('td', null, h('b', null, r.g.name)), weeks.map(w => cell(r.g, w)), h('td', null, h('b', null, fmtNum(r.t))))))));
-    const out = [table];
+    const out = [];
+    if (trunc.size) out.push(h('div', { class: 'note' }, `Chỉ hiển thị 1000 điểm đầu tiên của tuần ${weeks.filter(w => trunc.has(w)).map(W.label).join(', ')}.`));
+    out.push(table);
     if (failed.size) out.push(h('div', { class: 'note' }, `Không tải được ${failed.size} tuần. Bấm “Tải lại”.`));
     if (D.size < weeks.filter(w => w <= cur).length && !failed.size) out.push(h('p', { class: 'muted' }, `Đang tải tuần ${D.size + 1}/${weeks.filter(w => w <= cur).length}…`));
     if (sel) {
@@ -39,7 +41,7 @@ export function multiView({ mode, key, M, fresh }) {
     for (const w of weeks) {
       if (stopped) return;
       if (w > cur) continue;
-      try { D.set(w, await store.weekEntries(w, { fresh: fresh || w === cur })); failed.delete(w); } catch { failed.add(w); }
+      try { const r = await store.weekEntries(w, { fresh: fresh || w === cur }); D.set(w, r); failed.delete(w); if (r.truncated === true) trunc.add(w); else trunc.delete(w); } catch { failed.add(w); }
       if (!stopped) paint();
     }
     if (!stopped) paint();

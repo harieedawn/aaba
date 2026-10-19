@@ -7,7 +7,7 @@ import { getTheme, setTheme, onTheme, can, getSession } from '../session.js';
 import * as store from '../data/store.js';
 import { openSheet } from './sheet.js';
 import { toast } from './toast.js';
-import { errMsg, act } from './act.js';
+import { errMsg, act, saved } from './act.js';
 import { confirmSheet } from './form.js';
 import { setDraft } from './draft.js';
 import { logError } from '../errors.js';
@@ -140,12 +140,12 @@ export function entrySheet(e, { group, student, readOnly } = {}) {
       canVoid && h('button', { class: 'btn btn-ghost detail-void', type: 'button', onclick: () => {
         sh.close();
         reasonSheet({ title: 'Thu hồi điểm này?', text: `${e.ruleName}: ${fmtPts(e.points)} điểm sẽ không còn được tính.`, label: 'Thu hồi điểm',
-          onSubmit: async r => { await store.voidEntry(e.id, r); toast('Đã thu hồi điểm'); } });
+          onSubmit: async r => { await store.voidEntry(e.id, r); toast(saved('Đã thu hồi điểm')); } });
       } }, 'Thu hồi điểm')),
     canPurge && h('button', { class: 'btn btn-ghost detail-void', type: 'button', onclick: () => {
       sh.close();
       confirmSheet({ title: 'Xoá hẳn dòng này?', label: 'Xoá hẳn', text: 'Xoá vĩnh viễn dòng này? Không khôi phục được. Điểm của tổ không thay đổi vì dòng này đã thu hồi.',
-        onConfirm: async () => { await store.purgeEntries([e]); toast('Đã xoá hẳn'); } });
+        onConfirm: async () => { await store.purgeEntries([e]); toast(saved('Đã xoá hẳn')); } });
     } }, 'Xoá hẳn')) });
   return sh;
 }
