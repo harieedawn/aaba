@@ -33,7 +33,13 @@ assert.deepEqual(fin.rows.map(r => [r.group.name, r.rank]), [['Tổ 2', 2], ['T�
 assert.deepEqual(fin.steps.map(s => s.kind), ['row', 'row', 'row', 'hero', 'board']);
 assert.deepEqual(fin.steps.slice(0, 3).map(s => s.rows[0].group.name), ['Tổ 4', 'Tổ 3', 'Tổ 2']);
 assert.equal(fin.steps[3].line, 'Tổ 1 xếp hạng nhất tuần'); assert.equal(fin.tie, false);
-assert.equal(fin.first[0].total, 310); assert.equal(fin.first[0].cats.length, 3);
+assert.equal(fin.first[0].total, 310); // legacy config (categories 100+100+100, no baseScore) -> base 300, as before
+assert.deepEqual([fin.first[0].plus, fin.first[0].minus], [10, 0]); assert.equal('cats' in fin.first[0], false);
+{ const row = fin.board.find(r => r.group.id === 'g4'); assert.deepEqual([row.total, row.plus, row.minus], [291, 0, 9]); } // minus = magnitude
+{ const mkc = c => buildSlides({ entries: [E({ groupId: 'g1', points: 10 }), E({ groupId: 'g2', points: -5 })], groups: mk(4), students, config: c, weekLabel: '', isCurrent: false }).at(-1).board.map(r => r.total);
+  assert.deepEqual(mkc({ ...config, baseScore: 100 }), [110, 100, 100, 95]);   // baseScore wins over categories
+  assert.deepEqual(mkc({ ...config, baseScore: 0 }), [10, 0, 0, -5]);          // base 0, below zero
+  assert.deepEqual(mkc({ ...config, baseScore: 150 }), [160, 150, 150, 145]); }
 sl = run([E({ groupId: 'g2', points: 4 }), E({ groupId: 'g3', points: 4 })]);
 assert.equal(sl.at(-1).steps.at(-2).line, 'Tổ 2 · Tổ 3 đồng hạng nhất tuần'); assert.deepEqual(sl.at(-1).steps.at(-2).lines, ['Tổ 2 đồng hạng nhất tuần', 'Tổ 3 đồng hạng nhất tuần']);
 

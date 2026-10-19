@@ -17,6 +17,7 @@ import { BACKEND, APP_VERSION } from '../config.js';
 import { getSession, setSession, can, role, clearGate } from '../session.js';
 import { bind, invalidateWeek } from './weekstore.js';
 import { weekStart, weekKey } from '../weeks.js';
+import { baseOf } from '../scoring.js';
 const inv = at => invalidateWeek(weekKey(weekStart(at)));
 let A;
 const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -198,7 +199,7 @@ const byId = a => Object.fromEntries(a.map(({ id, ...d }) => [id, d]));
 // Config export: never invite codes (labels+roles only), never entries unless withEntries (full backup).
 export async function exportConfig({ withEntries = false } = {}) {
   need(can('dev'));
-  const config = await A.get('config', 'main'), out = { v: 1, app: 'aaba', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), config, titles: config.titles || [] };
+  const cfg0 = await A.get('config', 'main'), config = { ...cfg0, baseScore: baseOf(cfg0) }, out = { v: 1, app: 'aaba', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), config, titles: config.titles || [] };
   for (const c of COLS.filter(c => c !== 'entries' || withEntries)) out[c] = byId(await A.list(c));
   out.invites = (await A.list('invites')).map(({ label, role, active, groupId, studentId, titleId }) => ({ label, role, active, groupId, studentId, titleId }));
   const per = {};
@@ -212,6 +213,7 @@ export async function importConfig(obj, mode = 'merge') {
   need(can('dev'));
   need(obj && obj.v === 1, 'File không đúng định dạng aaba');
   delete obj.duty; // tolerated: old exports may still carry a 'duty' key; silently ignored
+  if (obj.config && !(typeof obj.config.baseScore === 'number' && Number.isFinite(obj.config.baseScore))) { obj.config = { ...obj.config }; delete obj.config.baseScore; } // files with no/invalid baseScore: legacy category bases still apply
   for (const c of COLS.filter(k => obj[k] && typeof obj[k] === 'object')) {
     if (mode === 'replace') for (const d of await A.list(c)) await A.remove(c, d.id);
     for (const [id, d] of Object.entries(obj[c])) await A.set(c, id, d, { raw: true });

@@ -106,7 +106,7 @@ export function buildDemo(now = Date.now()) {
     .map(([groupId, total, a, b, c]) => ({ groupId, total, byCat: { noiquy: a, hoctap: b, phongtrao: c } }));
   return {
     v: 2,
-    config: { className: '11A3', school: 'THPT Trần Quốc Toản', cycleWeeks: 4, openView: true, currentCycleId: 'c2', categories: CATEGORIES, titles: TITLES },
+    config: { className: '11A3', school: 'THPT Trần Quốc Toản', cycleWeeks: 4, openView: true, baseScore: 100, currentCycleId: 'c2', categories: CATEGORIES, titles: TITLES },
     groups, students, rules, entries,
     cycles: {
       c1: { n: 1, start: start - 28 * DAY, end: start, closed: true, summary: sum },

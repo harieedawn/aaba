@@ -53,13 +53,25 @@
 .bd-tile{width:calc(var(--s)*5.2);height:calc(var(--s)*5.2);font-size:calc(var(--s)*2.6)}.bd-row.win .bd-tile{background:var(--go);color:var(--gc)}
 .bd-nm{display:flex;align-items:center;gap:calc(var(--s)*1);min-width:0;font-size:calc(var(--s)*3);line-height:1.15;overflow-wrap:break-word}
 .bd-crown{display:inline-flex;flex:none}.bd-crown svg{width:calc(var(--s)*2.6);height:calc(var(--s)*2.6);fill:#FFD23F;stroke:#1F2430;stroke-width:1.6}
-.bd-cats{display:flex;gap:calc(var(--s)*3)}
-.bd-cat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}.bd-cat i{font-style:normal;font-size:max(11px,calc(var(--s)*1.5));color:var(--text-2)}.bd-row.win .bd-cat i{color:var(--go)}.bd-cat b{font-size:calc(var(--s)*2.4);font-weight:600}
+.bd-cats{display:flex;align-items:baseline;gap:.5em;font-size:calc(var(--s)*2.3);font-weight:600;line-height:1.15;white-space:nowrap;color:var(--text-2)}.bd-row.win .bd-cats{color:var(--go)}
 .bd-tot{font-size:calc(var(--s)*4.6);line-height:1;text-align:right;min-width:calc(var(--s)*8);font-weight:700}
 @media (hover:hover) and (pointer:fine){.bd-row{transition:transform .15s ease-out}.bd-row:hover{transform:translateY(-2px)}}
 @media (max-width:899px),(orientation:portrait){
 .bd{padding:calc(var(--s)*2) max(calc(var(--s)*3),var(--zw)) calc(var(--s)*1.6)}
 .bd-row{max-height:calc(var(--s)*14);grid-template-columns:calc(var(--s)*3.4) calc(var(--s)*5.5) minmax(0,1fr) auto;grid-template-areas:"rk tile nm tot" "rk tile cats cats";row-gap:calc(var(--s)*.3);padding:calc(var(--s)*.8) calc(var(--s)*1.6)}
 .bd-rk{grid-area:rk}.bd-tile{grid-area:tile;width:calc(var(--s)*5.5);height:calc(var(--s)*5.5)}.bd-nm{grid-area:nm}.bd-tot{grid-area:tot;font-size:calc(var(--s)*4);min-width:0}
-.bd-cats{grid-area:cats;gap:calc(var(--s)*2);flex-wrap:wrap}.bd-cat{flex-direction:row;align-items:baseline;gap:.4em}.bd-cat i,.bd-cat b{font-size:max(11px,calc(var(--s)*1.9))}
+.bd-cats{grid-area:cats;font-size:max(11px,calc(var(--s)*1.9));flex-wrap:wrap}
 }
+/* v3.1 Nổi bật + names: a name may wrap, an amount never sits over text */
+.ch-nm{white-space:normal;overflow-wrap:anywhere}.ch-nl .ch-nm{display:inline-block;max-width:100%}
+.ch-cols{align-content:start}
+.ch-col{justify-content:flex-start;align-self:stretch}
+.ch-col h3{flex:none}.ch-col .ch-ol{flex:none;align-self:stretch}
+.ch-ol li{grid-template-columns:minmax(0,1fr) auto;align-items:start;flex:none}
+.ch-ol .ch-rn{grid-area:1/1;min-width:0;overflow-wrap:anywhere}
+.ch-ol .ch-amt,.ch-ol .ch-cnt{grid-area:1/2;justify-self:end;white-space:nowrap}
+.ch-ol .ch-gchip{grid-area:2/1;justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.ch-lines li{grid-template-columns:minmax(0,1fr) minmax(calc(var(--lf)*2.4),auto)}
+.ch-lines .ch-rn,.ch-lines .ch-nl{overflow-wrap:anywhere}.ch-lines .ch-amt{white-space:nowrap}
+.ch-sr .ch-amt{flex:none}
+.bd-nm b{min-width:0;overflow-wrap:anywhere}

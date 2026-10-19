@@ -9,6 +9,7 @@ import { errorLog } from '../../errors.js';
 import { copyText } from '../../ui/form.js';
 import { confirmSheet } from '../../ui/form.js';
 import { CATEGORIES, TITLES } from '../../data/seed.js';
+import { baseOf } from '../../scoring.js';
 
 const kv = (k, v) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', { class: 'mono' }, v));
 const card = (title, ...kids) => h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, title)), ...kids);
@@ -36,7 +37,7 @@ function wipe(S) {
     text: 'Xóa tổ, học sinh, thể lệ, điểm; giữ tên lớp và mã mời. Hãy xuất cấu hình trước. Không hoàn tác được.',
     onConfirm: async () => {
       const c = S.config;
-      await store.importConfig({ v: 1, config: { className: c.className || '', school: c.school || '', cycleWeeks: c.cycleWeeks || 4, currentCycleId: 'c1', categories: CATEGORIES, titles: TITLES },
+      await store.importConfig({ v: 1, config: { className: c.className || '', school: c.school || '', cycleWeeks: c.cycleWeeks || 4, currentCycleId: 'c1', baseScore: baseOf(c), categories: CATEGORIES, titles: TITLES },
         groups: {}, students: {}, rules: {}, entries: {}, cycles: { c1: { n: 1, start: Date.now(), end: null, closed: false, summary: [] } } }, 'replace');
       toast('Đã xóa dữ liệu lớp'); location.hash = '#/dev';
     } });

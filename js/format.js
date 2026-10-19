@@ -32,3 +32,5 @@ export function relTime(t, now = Date.now()) {
   if (startOfDay(t) === startOfDay(now)) return `${Math.floor(m / 60)} giờ trước`;
   return `${fmtDate(t)} ${fmtTime(t)}`;
 }
+// Sub-line under a tổ name: "Cộng +A · Trừ −B" (plus >= 0, minus <= 0 as returned by groupScore); nothing recorded -> "Chưa có ghi điểm".
+export const plusMinus = r => (!r.plus && !r.minus ? 'Chưa có ghi điểm' : `Cộng +${fmtNum(r.plus)} · Trừ ${MINUS}${fmtNum(Math.abs(r.minus))}`);

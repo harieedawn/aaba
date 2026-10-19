@@ -4,9 +4,10 @@ import * as store from '../../data/store.js';
 import { navigate } from '../../router.js';
 import { toast } from '../../ui/toast.js';
 import { emptyState, dot } from '../../ui/components.js';
-import { field, textInput, textArea, checkInput, colorPicker, COLOR_IDS, errBox } from '../../ui/form.js';
+import { field, textInput, numberInput, textArea, checkInput, colorPicker, COLOR_IDS, errBox } from '../../ui/form.js';
 import { seedRules, CATEGORIES, TITLES } from '../../data/seed.js';
 import { errMsg } from '../../ui/act.js';
+import { baseOf } from '../../scoring.js';
 
 const once = col => new Promise(r => { let u; u = store.on(col, v => { queueMicrotask(() => u?.()); r(v); }); });
 const lines = t => t.split(/\r?\n/).map(x => x.replace(/^(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(Boolean);
@@ -23,6 +24,7 @@ async function finish(st, rules) {
   if (!cfg.titles || cfg._virtual) config.titles = TITLES;
   if (!cfg.cycleWeeks || cfg._virtual) config.cycleWeeks = 4;
   if (cfg._virtual) config.openView = true;
+  config.baseScore = st.base; // the wizard is an explicit act: one weekly base for every tổ
   const obj = { v: 1, config, groups, students };
   if (rules) obj.rules = seedRules();
   if (!cfg.currentCycleId || !cycles.some(c => c.id === cfg.currentCycleId)) {
@@ -33,7 +35,7 @@ async function finish(st, rules) {
 }
 export default function setup() {
   const body = h('div', { class: 'stack' });
-  const st = { step: 0, className: '', groups: [], members: [] };
+  const st = { step: 0, className: '', base: 100, groups: [], members: [] };
   const sync = () => { while (st.groups.length < st.n) st.groups.push({ name: `Tổ ${st.groups.length + 1}`, color: COLOR_IDS[st.groups.length % 8] }); st.groups.length = st.n; };
   st.n = 4; sync();
   const bar = () => h('div', { class: 'steps', 'aria-hidden': 'true' }, [0, 1, 2].map(i => h('span', { class: i <= st.step ? 'on' : '' })));
@@ -43,7 +45,8 @@ export default function setup() {
     const cls = textInput(st.className, { placeholder: 'Ví dụ: 11A3', 'aria-label': 'Tên lớp' }); cls.oninput = () => { st.className = cls.value; };
     const out = h('output', null, String(st.n));
     const set = d => { st.n = Math.min(8, Math.max(1, st.n + d)); sync(); paint(); };
-    return [field('Tên lớp', cls),
+    const bs = numberInput(st.base, { min: '0', max: '1000', step: '1', 'aria-label': 'Điểm khởi đầu mỗi tuần' }); bs.oninput = () => { const n = Number(bs.value); if (bs.value.trim() && Number.isInteger(n) && n >= 0 && n <= 1000) st.base = n; };
+    return [field('Tên lớp', cls), field('Điểm khởi đầu mỗi tuần', bs, 'Mỗi tuần, mỗi tổ bắt đầu với số điểm này.'),
       h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Số tổ'), h('div', { class: 'stepper' },
         h('button', { type: 'button', 'aria-label': 'Bớt tổ', onclick: () => set(-1) }, '−'), h('output', null, String(st.n)), h('button', { type: 'button', 'aria-label': 'Thêm tổ', onclick: () => set(1) }, '+'))),
       ...st.groups.map((g, i) => { const t = textInput(g.name, { 'aria-label': `Tên tổ ${i + 1}` }), c = colorPicker(g.color);
@@ -68,7 +71,7 @@ export default function setup() {
     return [h('div', { class: 'card' }, h('strong', null, `${st.className.trim() || 'Lớp'}: ${st.groups.length} tổ, ${total} học sinh`)), r, err, done];
   }
   const paint = () => put(body, bar(), h('div', { class: 'form' }, [s0, s1, s2][st.step]()));
-  once('groups').then(gs => gs.length
+  Promise.all([once('groups'), once('config')]).then(([gs, cfg]) => { st.base = baseOf(cfg); return gs; }).then(gs => gs.length
     ? put(body, emptyState({ icon: 'shield', title: 'Lớp đã có dữ liệu', text: 'Thiết lập từ đầu chỉ dùng khi lớp chưa có tổ. Muốn làm lại: xuất cấu hình, rồi “Xóa dữ liệu lớp” trong Công cụ.', action: { label: 'Mở Công cụ', href: '#/dev/tools' } }))
     : paint());
   return { el: body };

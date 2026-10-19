@@ -24,7 +24,7 @@ const ack = p => navigator.onLine ? W(p) : (p.catch(() => {}), Promise.resolve()
 const ref = (col, id) => col === 'config' ? F.doc(db, 'config', 'main') : F.doc(db, col, id);
 const conv = d => { for (const k in d) { const v = d[k]; if (v && typeof v.toMillis === 'function') d[k] = v.toMillis(); } return d; };
 const docOf = s => conv({ id: s.id, ...s.data({ serverTimestamps: 'estimate' }) });
-const VIRTUAL_CONFIG = () => ({ id: 'main', _virtual: true, className: '', school: '', cycleWeeks: 4, currentCycleId: null, categories: CATEGORIES, titles: TITLES });
+const VIRTUAL_CONFIG = () => ({ id: 'main', _virtual: true, className: '', school: '', cycleWeeks: 4, currentCycleId: null, baseScore: 100, categories: CATEGORIES, titles: TITLES });
 // invites/members carry join secrets: non-dev roles may only query the low roles (matches firestore.rules).
 const base = col => { const c = F.collection(db, col); return (col === 'invites' || col === 'members') && myRole !== 'dev' ? F.query(c, F.where('role', 'in', ['recorder', 'teacher', 'student'])) : c; };
 // Docs delivered by the server (billed reads): snapshot changes not served from cache + getDocs/getDoc results. See store.stats().

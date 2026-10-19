@@ -12,12 +12,12 @@ export function weeksFor(mode, key) { return (mode === 'quy' ? W.last3Months(key
 export function multiView({ mode, key, M, fresh }) {
   const weeks = weeksFor(mode, key), cur = W.weekStart(Date.now()), box = h('div', { class: 'stack' }, ...skeletonCards(3));
   const D = new Map(), failed = new Set(); let stopped = false, sel = null;
-  const total = id => weeks.reduce((s, w) => s + (D.get(w) ? groupScore(id, D.get(w).entries, M.config.categories).total : 0), 0);
+  const total = id => weeks.reduce((s, w) => s + (D.get(w) ? groupScore(id, D.get(w).entries, M.config).total : 0), 0);
   function paint() {
     const rows = M.groups.map(g => ({ g, t: total(g.id) })).sort((a, b) => b.t - a.t || a.g.name.localeCompare(b.g.name, 'vi'));
     rows.forEach((r, i) => { r.rank = i && r.t === rows[i - 1].t ? rows[i - 1].rank : i + 1; });
     const th = w => h('th', null, h('div', null, W.label(w).replace(' → ', ' →\u00a0')), w === cur && h('div', { class: 'tag pill-live' }, 'đang diễn ra'));
-    const cell = (g, w) => h('td', null, w > cur ? '—' : D.get(w) ? fmtNum(groupScore(g.id, D.get(w).entries, M.config.categories).total) : failed.has(w) ? '!' : '…');
+    const cell = (g, w) => h('td', null, w > cur ? '—' : D.get(w) ? fmtNum(groupScore(g.id, D.get(w).entries, M.config).total) : failed.has(w) ? '!' : '…');
     const table = h('div', { class: 'tk-tw' }, h('table', { class: 'tk-t' },
       h('thead', null, h('tr', null, h('th', null, 'Hạng'), h('th', null, 'Tổ'), weeks.map(th), h('th', null, 'Tổng'))),
       h('tbody', null, rows.map(r => h('tr', { class: `g-${r.g.color} pressable` + (sel === r.g.id ? ' on' : ''), tabindex: '0', onclick: () => { sel = sel === r.g.id ? null : r.g.id; paint(); } },
@@ -28,7 +28,7 @@ export function multiView({ mode, key, M, fresh }) {
     if (sel) {
       const g = M.groups.find(x => x.id === sel);
       out.push(h('section', { class: 'card' }, h('h2', null, g.name), weeks.filter(w => D.get(w)).map(w => {
-        const s = groupScore(g.id, D.get(w).entries, M.config.categories);
+        const s = groupScore(g.id, D.get(w).entries, M.config);
         return h('a', { class: 'tk-mem pressable', href: `#/tongket/tuan/${W.weekKey(w)}` }, h('span', null, W.label(w)),
           h('span', { class: 'muted' }, `${fmtPts(s.plus)} / ${fmtPts(s.minus)}`), h('b', null, fmtNum(s.total)));
       })));

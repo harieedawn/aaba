@@ -1,13 +1,13 @@
 // Tổng kết · Tuần: ranking, Nổi bật, per-tổ full detail.
 import { h } from '../../ui/dom.js';
-import { fmtNum } from '../../format.js';
+import { fmtNum, plusMinus } from '../../format.js';
 import { rankGroups } from '../../scoring.js';
 import { emptyState } from '../../ui/components.js';
 import { groupDetail } from './parts.js';
 import { tags } from './tags.js';
 
 export function renderWeek({ entries, truncated, M, isCurrent, readOnly, extra }) {
-  const cats = M.config.categories, ranked = rankGroups(M.groups, entries, cats);
+  const ranked = rankGroups(M.groups, entries, M.config);
   const ctx = { gm: new Map(M.groups.map(g => [g.id, g])), sm: new Map(M.students.map(s => [s.id, s])), readOnly, tags, voidExtra: extra?.voidExtra };
   const out = [];
   if (truncated) out.push(h('div', { class: 'note' }, 'Chỉ hiển thị 1000 điểm đầu tiên của tuần.'));
@@ -16,7 +16,7 @@ export function renderWeek({ entries, truncated, M, isCurrent, readOnly, extra }
     h('span', { class: 'rank' }, r.rank),
     h('span', { class: 'tile' }, ((r.group.name || '?').match(/\d+/) || [(r.group.name || '?')[0]])[0]),
     h('div', { class: 'lb-id' }, h('div', { class: 'lb-name-row' }, h('span', { class: 'lb-name' }, r.group.name)),
-      h('div', { class: 'lb-sub' }, cats.map(k => `${k.name} ${fmtNum(r.byCat[k.id])}`).join(' · '))),
+      h('div', { class: 'lb-sub' }, plusMinus(r))),
     h('div', { class: 'lb-score' }, h('span', { class: 'lb-total' }, fmtNum(r.total)))))));
   const ok = entries.filter(e => e.status === 'ok'), use = new Map();
   ok.filter(e => e.points < 0).forEach(e => use.set(e.ruleName, (use.get(e.ruleName) || 0) + 1));

@@ -2,7 +2,7 @@
 import { h, put } from '../ui/dom.js';
 import * as store from '../data/store.js';
 import { rankGroups, deltaSince } from '../scoring.js';
-import { fmtNum, fmtPts, startOfDay } from '../format.js';
+import { fmtNum, fmtPts, startOfDay, plusMinus } from '../format.js';
 import { label as wkLabel, daysLeft, dowOf, DAY } from '../weeks.js';
 import { toast } from '../ui/toast.js';
 import { bell, themeToggle, entryRow, skeletonCards, emptyState } from '../ui/components.js';
@@ -12,7 +12,7 @@ import { getSession, can, role } from '../session.js';
 const memo = new Map(); let memoOrder = ''; // last shown values: remount animates from them
 const COLS = ['config', 'groups', 'students', 'entries'];
 
-function makeCard(cats, id) {
+function makeCard(id) {
   const c = { v: 0, d: 0 };
   c.rank = h('span', { class: 'rank' });
   c.name = h('span', { class: 'lb-name' });
@@ -44,7 +44,7 @@ export default function home() {
       h('section', { 'aria-label': 'Bảng xếp hạng' }, board),
       side));
 
-  function paint(c, r, cats, mine, since) {
+  function paint(c, r, mine, since) {
     const top = r.rank === 1, g = r.group;
     c.el.className = (top ? `lb-hero pressable g-${g.color}` : `lb-row pressable g-${g.color}`) + (g.id === mine ? ' mine' : '');
     c.el.href = '#/to/' + g.id;
@@ -57,7 +57,7 @@ export default function home() {
     countUp(c.total, r.total);
     const d = deltaSince(g.id, S.entries, since);
     c.today.textContent = d ? `${fmtPts(d)} hôm nay` : 'Chưa có điểm hôm nay';
-    c.sub.textContent = cats.map(k => `${k.name} ${fmtNum(r.byCat[k.id])}`).join(' · ');
+    c.sub.textContent = plusMinus(r);
     if (!c.fresh && d !== c.d) floatDelta(c.total, fmtPts(d - c.d), d - c.d > 0 ? 'pos' : 'neg');
     c.fresh = false; c.d = d;
     const rankLab = h('div', { class: 'hero-rank' }, 'Dẫn đầu');
@@ -66,14 +66,14 @@ export default function home() {
     memo.set(g.id, { v: r.total, d });
   }
 
-  function renderBoard(cats) {
-    const ranked = rankGroups(S.groups, S.entries, cats);
+  function renderBoard(cfg) {
+    const ranked = rankGroups(S.groups, S.entries, cfg);
     const since = startOfDay(Date.now()), mine = getSession()?.groupId;
     if (!done) put(board);
     const next = ranked.map(r => {
       let c = cards.get(r.group.id);
-      if (!c) cards.set(r.group.id, (c = makeCard(cats, r.group.id)));
-      paint(c, r, cats, mine, since);
+      if (!c) cards.set(r.group.id, (c = makeCard(r.group.id)));
+      paint(c, r, mine, since);
       return c;
     });
     next.forEach((c, i) => { c.id = ranked[i].group.id; });
@@ -120,7 +120,7 @@ export default function home() {
     put(recap, ...(dowOf(now) === 6
       ? [h('div', { class: 'wk-card' }, h('b', null, 'Tổng kết tuần trước'), h('a', { href: '#/tongket' }, 'Xem đầy đủ'))]
       : [h('a', { class: 'link wk-link', href: '#/tongket' }, 'Tổng kết tuần trước')]));
-    const ranked = renderBoard(S.config.categories);
+    const ranked = renderBoard(S.config);
     const [a, b] = ranked;
     lead.textContent = !a || !S.entries.length ? 'Chưa có điểm nào trong tuần này.'
       : !b ? `${a.group.name} đang dẫn đầu.`

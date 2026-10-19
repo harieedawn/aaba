@@ -51,9 +51,9 @@ export function podiumLayout(first, rest) {
     .map(({ r }) => ({ ...r, level: ranks.indexOf(r.rank), h: mx > 0 ? +Math.min(1, Math.max(0.35, (r.total || 0) / mx)).toFixed(3) : 1 }));
 }
 
-function finaleSlide(groups, entries, cats, isCurrent) {
-  const rows = rankGroups(groups, entries, cats).map(r => ({
-    rank: r.rank, group: gref(r.group), total: r.total, cats: cats.map(c => ({ name: c.name, value: r.byCat[c.id] })),
+function finaleSlide(groups, entries, config, isCurrent) {
+  const rows = rankGroups(groups, entries, config).map(r => ({
+    rank: r.rank, group: gref(r.group), total: r.total, plus: r.plus, minus: Math.abs(r.minus),
   }));
   const first = rows.filter(r => r.rank === 1), rest = rows.filter(r => r.rank !== 1);
   const tie = first.length > 1, names = first.map(r => r.group.name).join(' · ');
@@ -64,11 +64,11 @@ function finaleSlide(groups, entries, cats, isCurrent) {
 }
 
 export function buildSlides({ entries = [], groups = [], students = [], config = {}, weekLabel = '', isCurrent = false, daysLeft = 0 }) {
-  const gs = orderGroups(groups), sm = new Map(students.map(s => [s.id, s])), net = studentNet(entries), cats = config.categories || [];
+  const gs = orderGroups(groups), sm = new Map(students.map(s => [s.id, s])), net = studentNet(entries);
   const out = [{ type: 'title', title: 'Tổng kết tuần', weekLabel, isCurrent, daysLeft, tag: isCurrent ? tempTag(daysLeft) : '', className: config.className || '', school: config.school || '' }];
   for (const g of gs) out.push(groupSlide(g, entries, sm, net));
   const top = topSlide(entries, gs, sm, net);
   if (top) out.push(top);
-  if (gs.length) out.push(finaleSlide(gs, entries, cats, isCurrent));
+  if (gs.length) out.push(finaleSlide(gs, entries, config, isCurrent));
   return out;
 }

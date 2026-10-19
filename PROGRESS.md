@@ -123,3 +123,27 @@
 - New `js/views/chieu/board.js` (`renderBoard`): title "Bảng xếp hạng" (+ " · tạm tính"), rows rank | tile | name (+crown on rank 1) | 3 subtotals | total; winner rows solid tổ colour (white/ink text via --go), others surface rows; portrait: subtotals under the name. Hover lift (desktop pointer). CSS appended to chieu3.css (`.bd-*`); old `.pd-sus/.pd-cats/.pd-leg` rules are dead.
 - fit.js also checks `.pd-area` column tops (growth is upward, not in scrollHeight) and `.bd-rows`; `.pd-hero` overflow hidden so hero shrinks via --fit.
 - Checks: node --check clean, build.selftest + podium selftest OK, ban-list grep clean. Not browser-tested.
+## Score model (one score per tổ per week) — Step 1 DONE
+- A tổ's weekly score = `baseOf(config)` + sum of points of entries with status 'ok' (pending/void excluded). No category split anywhere in scoring or display.
+- `baseOf(config)` (js/scoring.js, pure): `config.baseScore` if a finite number (0 is valid) → else legacy sum of `config.categories[].base` (today's 50+50+0 = 100) → else 100. `groupScore/rankGroups(…, baseOrConfig)` → `{total, plus, minus, pending}` (`byCat` dropped; minus ≤ 0). Month/3-month tables still sum weekly totals.
+- `config/main.categories` stays untouched in data (ids/names/base) = "Nhóm": only organises Thể lệ, the criterion picker, the rule editor and the small category tag on entry rows. Entries still carry `cat` exactly as before (rules unchanged, firestore.rules byte-identical).
+- Nothing writes config at load/upgrade. Settings writes ONLY `baseScore` (merge) and only when the value changed (confirm sheet first); an unchanged value is not written, so a legacy config keeps falling back to its category bases (= identical scores).
+- Display: sub-line under each tổ name = `Cộng +A · Trừ −B` (helper `plusMinus` in format.js; `Chưa có ghi điểm` if both 0). Trình chiếu board rows: `+A · −B`. Per-category subtotals removed from Xếp hạng/home, Tổng kết, group page ("Theo nhóm" card removed), board. Podium / Nổi bật / notifications never showed them.
+- Settings: ONE integer field "Điểm khởi đầu mỗi tuần" (0–1000, default = baseOf(config)). Setup wizard: one base field (default baseOf(config), written as `baseScore`). Export: `config.baseScore` always included (= baseOf). Import: files with/without `baseScore`, any category bases; a non-numeric `baseScore` is ignored. Dev wipe keeps `baseScore: baseOf(config)`. Seed + virtual config: `baseScore: 100`, seed categories unchanged (demo scores now start at 100 instead of 350).
+- Decisions: no "Kiểm tra dữ liệu" feature exists in the code (nothing to change); the confirm sheet's cancel button keeps the shared label "Hủy"; hero card (rank 1) keeps its "hôm nay" line (it never carried the sub-line).
+### Before vs after — legacy config (categories 50/50/0, no baseScore)
+| Week content for one tổ (ok unless noted) | Before: 50+50+0 + Σ | After: baseOf=100 + Σ |
+|---|---|---|
+| empty week | 100 | 100 |
+| +8, −20 | 88 | 88 |
+| +8, −20, pending +5, void −50 | 88 | 88 |
+| −150 (below zero) | −50 | −50 |
+| +30 (cat phongtrao, base 0) | 130 | 130 |
+| baseScore=100 set explicitly, same entries | 88 | 88 |
+Selftest `js/scoring.selftest.mjs` also compares the old function with the new one on a 200-entry random fixture (totals, plus, minus, pending equal for every tổ) and covers baseScore 0 / 100 / 150, negatives, void/pending, ties.
+## Trình chiếu v3.1 — Step 2 (Nổi bật / names fix) DONE
+- Root cause: `.ch-nm{white-space:nowrap}` (chieu.css) kept a long student name on one line, so it overflowed its grid track and ran under the amount column; the left card's title sat mid-card because `.ch-col` was `justify-content:center`.
+- fit.js: `over()` now also tests HORIZONTAL overflow (`scrollWidth > clientWidth + 1`) on `.ch-main/.ch-cols/.ch-col/.bd-rows` and on rows `.ch-ol li/.ch-lines li/.ch-star/.bd-row/.ch-side`, stepping `--fit` 1→0.6 as before (podium/hero areas stay vertical-only to avoid false positives from their animation start states).
+- css/chieu3.css (appended block): `.ch-nm` wraps (`overflow-wrap:anywhere`; in `.ch-nl` lists it is an inline-block so a name moves as one unit when it fits); Nổi bật rows = grid `minmax(0,1fr) auto` (name wraps | amount own column, nowrap, `justify-self:end`; tổ chip on row 2, may wrap); `.ch-col` content starts at the TOP (title, then list), `.ch-cols{align-content:start}` so the two cards share the height of the taller one and short lists keep normal row size (no stretching); tổ-slide lines amount column `minmax(2.4·lf, auto)`; star card amount `flex:none`; board name `<b>` can shrink/wrap.
+- Reasoning (--s0 = clamp(8px, 5px + .62·min(1vw,1.7778dvh), 18px); card inner width = (viewport − 2·max(5s, 14vw) − 3s)/2 − 6s): 1366 → s≈13.5px, inner ≈392px; 1536 → s≈14.5px, inner ≈440px; 1920 → s≈16.9px, inner ≈564px; each leaves a name column ≥ ~200px next to the widest amount ("12 lần" ≈ 2.4·font). 390 portrait → stacked, s≈9.4px, inner ≈278px, name ≈158px (names wrap to ≥2 lines). In every case the name track is `minmax(0,1fr)` so it can only wrap, never push into the amount; remaining height is handled by --fit.
+- Not browser-tested.

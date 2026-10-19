@@ -15,7 +15,7 @@ export default function rules() {
     for (const c of S.config.categories) {
       const rs = S.rules.filter(r => r.cat === c.id && r.active !== false).sort((a, b) => a.order - b.order);
       out.push(h('section', { class: 'card' },
-        h('div', { class: 'sec-h' }, h('h2', null, c.name), h('span', { class: 'muted', style: { fontSize: '13px' } }, `Điểm khởi đầu ${c.base}`)),
+        h('div', { class: 'sec-h' }, h('h2', null, c.name)),
         rs.length ? rs.map(r => h('div', { class: 'rule' },
           h('div', { class: 'rule-main' }, h('div', null, r.name),
             h('div', { class: 'rule-note muted' }, [SCOPE[r.scope], r.perUnit && 'Theo số lượng', admin && r.assumed && 'tạm tính'].filter(Boolean).join(' · ')),
