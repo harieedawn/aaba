@@ -28,10 +28,10 @@ export function enter(s, el) {
     });
     const st = q('.ch-star'), sd = 420 + L.length * 65 + 120;
     if (st) { play(st, [{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: sd }); nums(st, sd); }
-  } else if (s.type === 'top') {
-    rise(q('.ch-h2'), 0, 16, 420);
+  } else if (s.type === 'minus' || s.type === 'plus') {
+    rise(q('.tp-head'), 0, 16, 420); nums(q('.tp-head'), 120); rise(q('.tp-gs'), 100, 20, 460); nums(q('.tp-gs'), 220);
     all('.ch-col').forEach((c, ci) => {
-      rise(c, 120 + ci * 90, 28, 520);
+      rise(c, 200 + ci * 90, 28, 520);
       c.querySelectorAll('li').forEach((li, i) => rise(li, 330 + ci * 90 + i * 70, 18, 400));
       nums(c, 400 + ci * 90);
     });

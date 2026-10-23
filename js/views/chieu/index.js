@@ -7,7 +7,8 @@ import { navigate } from '../../router.js';
 import { play, skip, cancelAll } from './motion.js';
 import { enter } from './enter.js';
 import { buildSlides } from './build.js';
-import { renderSlide, maskNames } from './slides.js';
+import { renderSlide, maskNames, tapOf } from './slides.js';
+import { openModal } from './modal.js';
 import { renderFinale } from './finale.js';
 import { bindInput } from './input.js';
 import { fit, watchFit } from './fit.js';
@@ -25,7 +26,7 @@ export default function chieu({ params: [key] }) {
   const cur = W.weekStart(Date.now()), start = W.keyToStart(key);
   if (start == null || start > cur) { setTimeout(() => navigate('/tongket'), 0); return { el: h('div') }; }
   const M = {}, exit = () => navigate(`/tongket/tuan/${key}`);
-  let slides = [], i = 0, k = 0, fin = null, hide = false, gone = false, tok = 0, started = false;
+  let slides = [], i = 0, modal = null, k = 0, fin = null, hide = false, gone = false, tok = 0, started = false;
   const ready = () => ['config', 'groups', 'students'].every(c => M[c] !== undefined);
   const btn = (cls, label, ic, on) => h('div', { class: `ch-cz ${cls}` }, h('button', { class: 'ch-btn ch-ctl', type: 'button', title: label, 'aria-label': label, onclick: on }, icon(ic, 16)));
   const box = h('div', { class: 'ch-box' }), dots = h('span', { class: 'ch-dots' }), cnt = h('span', { class: 'ch-cnt2' });
@@ -44,7 +45,7 @@ export default function chieu({ params: [key] }) {
     cnt.textContent = slides.length ? `${i + 1} / ${slides.length}` : '';
   }
   function paint(dir) {
-    cancelAll(); const s = slides[i]; k = 0; fin = s.type === 'finale' ? renderFinale(s) : null;
+    cancelAll(); modal?.close(); const s = slides[i]; k = 0; fin = s.type === 'finale' ? renderFinale(s) : null;
     const el = fin ? fin.el : renderSlide(s);
     put(box, el); fit(el); maskNames(el, hide);
     if (dir < 0) play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 }); else enter(s, el);
@@ -55,7 +56,9 @@ export default function chieu({ params: [key] }) {
   // Advance = finish running animation first (that press does nothing else); prev just cancels and goes back.
   function advance() { if (!slides.length || skip()) return; next(); }
   function back() { cancelAll(); prev(); }
-  function toggleHide() { hide = !hide; ind.hidden = !hide; maskNames(box, hide); }
+  function toggleHide() { hide = !hide; ind.hidden = !hide; maskNames(root, hide); }
+  const onTap = e => { const t = e.target.closest?.('[data-tap]'), d = t && tapOf(t); if (d) { e.stopPropagation(); modal?.close(); modal = openModal(root, d, hide, () => { modal = null; }); } };
+  box.addEventListener('click', onTap);
 
   function load(fresh) {
     if (!ready()) return;
@@ -78,7 +81,7 @@ export default function chieu({ params: [key] }) {
   put(box, h('div', { class: 'ch-skel', 'aria-busy': 'true' }, h('i'), h('i'), h('i')));
   nav();
   return { el: h('div'), destroy() {
-    gone = true; cancelAll(); unbind(); unfit(); clearTimeout(tt); subs.forEach(u => u()); root.remove();
+    gone = true; cancelAll(); modal?.close(); box.removeEventListener('click', onTap); unbind(); unfit(); clearTimeout(tt); subs.forEach(u => u()); root.remove();
     if (!document.querySelector('.ch')) document.body.classList.remove('chieu-on');
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignore */ }
   } };

@@ -8,14 +8,18 @@ export const orderGroups = gs => [...gs].sort((a, b) => (a.order ?? num(a)) - (b
 export const tempTag = n => (n > 0 ? `Tạm tính · còn ${n} ngày` : 'Tạm tính · hôm nay chốt tuần');
 const gref = g => ({ id: g.id, name: g.name, color: g.color || 'slate' });
 
+// one recorded entry, as shown in the detail modal (data already loaded for the slide; no extra reads)
+const evOf = (e, sm) => ({ name: (e.studentId && sm.get(e.studentId)?.name) || 'Cả tổ', rule: e.ruleName, points: e.points, at: e.at || 0, by: e.byName || '' });
+const byAt = (a, b) => b.at - a.at;
+
 function groupSlide(g, entries, sm, net) {
   const mine = entries.filter(e => e.groupId === g.id && e.status !== 'void');
   const ok = mine.filter(e => e.status === 'ok' && e.points), pending = mine.filter(e => e.status === 'pending').length;
   const pos = ok.filter(e => e.points > 0), neg = ok.filter(e => e.points < 0);
   const by = new Map();
   for (const e of ok) {
-    const k = (e.points > 0 ? '+' : '-') + e.ruleName, l = by.get(k) || { ruleName: e.ruleName, sign: e.points > 0 ? 1 : -1, count: 0, points: 0, names: [] };
-    l.count++; l.points += e.points;
+    const k = (e.points > 0 ? '+' : '-') + e.ruleName, l = by.get(k) || { ruleName: e.ruleName, sign: e.points > 0 ? 1 : -1, count: 0, points: 0, names: [], items: [] };
+    l.count++; l.points += e.points; l.items.push(evOf(e, sm));
     const n = e.points > 0 && e.studentId && sm.get(e.studentId)?.name;
     if (n && !l.names.includes(n)) l.names.push(n);
     by.set(k, l);
@@ -31,17 +35,36 @@ function groupSlide(g, entries, sm, net) {
   };
 }
 
-function topSlide(entries, groups, sm, net) {
-  const gm = new Map(groups.map(g => [g.id, g])), use = new Map();
-  for (const e of entries) if (e.status === 'ok' && e.points < 0 && gm.has(e.groupId)) {
-    const u = use.get(e.ruleName) || { name: e.ruleName, count: 0, points: 0 };
-    u.count++; u.points += Math.abs(e.points); use.set(e.ruleName, u);
+// "Hay bị trừ" + "Bạn nổi bật": two slides, each skipped (null) when it has nothing to show.
+function topSlides(entries, groups, sm) {
+  const gm = new Map(groups.map(g => [g.id, g])), ok = entries.filter(e => e.status === 'ok' && e.points && gm.has(e.groupId));
+  const agg = (list, keyOf, mk) => {
+    const m = new Map();
+    for (const e of list) { const k = keyOf(e); if (k == null) continue; const u = m.get(k) || { ...mk(e, k), count: 0, total: 0, items: [] }; u.count++; u.total += Math.abs(e.points); u.items.push(evOf(e, sm)); m.set(k, u); }
+    return [...m.values()].map(u => ({ ...u, items: u.items.sort(byAt) }));
+  };
+  const stu = (e, id) => { const st = sm.get(id); return { id, name: st.name, group: gref(gm.get(st.groupId)) }; };
+  const inG = e => e.studentId && sm.get(e.studentId) && gm.has(sm.get(e.studentId).groupId) ? e.studentId : null;
+  const cmp = (a, b) => b.total - a.total || b.count - a.count || vi(a.name, b.name);
+  const neg = ok.filter(e => e.points < 0), pos = ok.filter(e => e.points > 0);
+  let minus = null, plus = null;
+  if (neg.length) {
+    const gs = agg(neg, e => e.groupId, e => ({ group: gref(gm.get(e.groupId)), name: gm.get(e.groupId).name })).sort(cmp);
+    minus = {
+      type: 'minus', total: neg.reduce((t, e) => t + Math.abs(e.points), 0), count: neg.length, groups: gs, topGroup: gs[0].group.id,
+      students: agg(neg, inG, stu).sort(cmp).slice(0, 5),
+      rules: agg(neg, e => e.ruleName, e => ({ name: e.ruleName })).sort((a, b) => b.count - a.count || b.total - a.total || vi(a.name, b.name)).slice(0, 3),
+    };
   }
-  const rules = [...use.values()].sort((a, b) => b.count - a.count || b.points - a.points || vi(a.name, b.name)).slice(0, 3).map(u => ({ name: u.name, count: u.count }));
-  const students = [...net].filter(([id, v]) => v > 0 && sm.get(id) && gm.has(sm.get(id).groupId))
-    .map(([id, v]) => ({ name: sm.get(id).name, group: gref(gm.get(sm.get(id).groupId)), net: v }))
-    .sort((a, b) => b.net - a.net || vi(a.name, b.name)).slice(0, 3);
-  return rules.length || students.length ? { type: 'top', rules, students } : null;
+  if (pos.length) {
+    const st = agg(pos, inG, stu), students = [...st].sort(cmp).slice(0, 5);
+    if (students.length) plus = {
+      type: 'plus', total: pos.reduce((t, e) => t + e.points, 0), count: pos.length, students,
+      // "most improved" needs a previous week (not loaded here); most-active = most separate + records, only when someone has 2+
+      active: st.filter(u => u.count >= 2).sort((a, b) => b.count - a.count || cmp(a, b)).slice(0, 3),
+    };
+  }
+  return [minus, plus];
 }
 
 // Podium columns left→right = last place … 1st; h = total / highest total (min 0.35, so ties share a height).
@@ -67,8 +90,7 @@ export function buildSlides({ entries = [], groups = [], students = [], config =
   const gs = orderGroups(groups), sm = new Map(students.map(s => [s.id, s])), net = studentNet(entries);
   const out = [{ type: 'title', title: 'Tổng kết tuần', weekLabel, isCurrent, daysLeft, tag: isCurrent ? tempTag(daysLeft) : '', className: config.className || '', school: config.school || '' }];
   for (const g of gs) out.push(groupSlide(g, entries, sm, net));
-  const top = topSlide(entries, gs, sm, net);
-  if (top) out.push(top);
+  for (const t of topSlides(entries, gs, sm)) if (t) out.push(t);
   if (gs.length) out.push(finaleSlide(gs, entries, config, isCurrent));
   return out;
 }

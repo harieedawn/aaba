@@ -22,7 +22,7 @@ assert.match(fin.steps[0].line, /đồng hạng nhất tuần$/);
 
 // 2. one tổ empty (g3 has nothing)
 sl = run([E({ groupId: 'g1', studentId: 's_g1_1', ruleName: 'Phát biểu', points: 5, cat: 'b' }), E({ groupId: 'g2' }), E({ groupId: 'g4', points: -3 })]);
-assert.equal(types(sl), 'title,group,group,group,group,top,finale');
+assert.equal(types(sl), 'title,group,group,group,group,minus,plus,finale');
 assert.deepEqual(sl.slice(1, 5).map(s => s.empty), [false, false, true, false]);
 assert.equal(sl[1].star.name, 'HS g1.1'); assert.equal(sl[1].plusSum, 5); assert.equal(sl[1].minusSum, 0);
 
@@ -52,8 +52,8 @@ sl = run(es);
 assert.equal(sl[1].pending, 1); assert.equal(sl[1].plusCount, 0); assert.equal(sl[1].minusCount, 1);
 assert.deepEqual(sl[1].lines.map(l => l.ruleName), ['Mất trật tự']); assert.equal(sl[1].star, null);
 assert.equal(sl.at(-1).rows.concat(sl.at(-1).first).find(r => r.group.id === 'g1').total, 299);
-assert.deepEqual(sl.find(s => s.type === 'top').rules, [{ name: 'Mất trật tự', count: 1 }]);
-assert.equal(sl.find(s => s.type === 'top').students.length, 0);
+assert.deepEqual(sl.find(s => s.type === 'minus').rules.map(r => [r.name, r.count]), [['Mất trật tự', 1]]);
+assert.equal(sl.find(s => s.type === 'minus').students.length, 0); assert.equal(sl.some(s => s.type === 'plus'), false); // pending/void never counted; plus slide skipped
 assert.equal(types(run([E({ status: 'void' }), E({ status: 'pending', points: 3 })])), 'title,group,group,group,group,finale'); // no Nổi bật
 
 // 5. lines: grouping, sort by |points|, ×count, names only on + lines, max 5 + "more"
@@ -68,17 +68,22 @@ assert.ok(g1.lines.filter(l => l.sign < 0).every(l => l.names.length === 0));
 assert.deepEqual([g1.plusCount, g1.minusCount, g1.plusSum, g1.minusSum], [3, 8, 6, 29]);
 assert.equal(g1.star.name, 'HS g1.1'); assert.equal(g1.star.net, 4);
 
-// 6. Nổi bật: top 3 deduction rules by count, top 3 students net > 0 (never students for deductions)
-const tp = run([
+// 6. Hay bị trừ (rules by count, students/tổ by total) + Bạn nổi bật (students by points gained)
+const tpS = run([
   ...[1, 2, 3].map(() => E({ ruleName: 'A', points: -1 })), ...[1, 2].map(() => E({ ruleName: 'B', points: -1, studentId: 's_g1_1' })),
   E({ ruleName: 'C', points: -1 }), E({ ruleName: 'D', points: -1 }),
   E({ groupId: 'g2', ruleName: 'X', points: 7, studentId: 's_g2_1' }), E({ groupId: 'g3', ruleName: 'X', points: 5, studentId: 's_g3_1' }),
   E({ groupId: 'g4', ruleName: 'X', points: 3, studentId: 's_g4_1' }), E({ groupId: 'g4', ruleName: 'X', points: 1, studentId: 's_g4_2' }),
-]).find(s => s.type === 'top');
+]);
+const tp = tpS.find(s => s.type === 'minus'), pl = tpS.find(s => s.type === 'plus');
 assert.deepEqual(tp.rules.map(r => r.name), ['A', 'B', 'C']); assert.deepEqual(tp.rules.map(r => r.count), [3, 2, 1]);
-assert.deepEqual(tp.students.map(s => [s.name, s.net, s.group.name]), [['HS g2.1', 7, 'Tổ 2'], ['HS g3.1', 5, 'Tổ 3'], ['HS g4.1', 3, 'Tổ 4']]);
-assert.equal(tp.students.some(s => s.name === 'HS g1.1'), false);
-assert.equal(run([E({ ruleName: 'Q', points: -1 })]).find(s => s.type === 'top').students.length, 0); // only rules half
+assert.deepEqual(tp.students.map(s => [s.name, s.total, s.count, s.group.name]), [['HS g1.1', 2, 2, 'Tổ 1']]);
+assert.equal(tp.groups[0].group.name, 'Tổ 1'); assert.equal(tp.groups[0].total, 7); assert.equal(tp.total, 7); assert.equal(tp.count, 7); assert.equal(tp.groups[0].items.length, 7);
+assert.deepEqual(pl.students.map(s => [s.name, s.total, s.group.name]), [['HS g2.1', 7, 'Tổ 2'], ['HS g3.1', 5, 'Tổ 3'], ['HS g4.1', 3, 'Tổ 4'], ['HS g4.2', 1, 'Tổ 4']]);
+assert.deepEqual(pl.active, []); assert.equal(pl.students[0].items[0].rule, 'X');
+assert.equal(run([E({ ruleName: 'Q', points: -1 })]).find(s => s.type === 'minus').students.length, 0); // group-wide deduction: no student
+assert.equal(run([E({ ruleName: 'Q', points: -1 })]).some(s => s.type === 'plus'), false);
+assert.ok(sl.find(s => s.type === 'group').lines.every(l => Array.isArray(l.items))); // detail rows for the modal
 
 // 7. 4 and 8 groups (numeric order, 10 after 2), 8 groups: 7 non-first rows + hero
 sl = run([E({ groupId: 'g1', points: 3 })], mk(4));

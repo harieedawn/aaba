@@ -7,7 +7,7 @@ const high = el => [...el.querySelectorAll('.pd-area')].some(a => { const t = a.
 // HORIZONTAL overflow too (scrollWidth > clientWidth): columns/cards (.ch-main/.ch-cols/.ch-col/.bd-rows) and rows (Nổi bật + tổ lines, star card, board rows, tổ side)
 const wide = c => c.scrollWidth > c.clientWidth + 1;
 const over = el => [el, ...el.querySelectorAll('.ch-main,.ch-cols,.ch-col,.pd-area,.pd-hero,.bd-rows')].some(c => c.scrollHeight > c.clientHeight + 1)
-  || [...el.querySelectorAll('.ch-main,.ch-cols,.ch-col,.bd-rows,.ch-ol li,.ch-lines li,.ch-star,.bd-row,.ch-side')].some(wide) || high(el);
+  || [...el.querySelectorAll('.ch-main,.ch-cols,.ch-col,.bd-rows,.ch-ol li,.tp-gs,.tp-head,.ch-lines li,.ch-star,.bd-row,.ch-side')].some(wide) || high(el);
 
 function run(el) {
   for (let f = 1; f >= MIN - 1e-6; f = Math.round((f - STEP) * 100) / 100) { el.style.setProperty('--fit', f); if (!over(el)) return true; }
