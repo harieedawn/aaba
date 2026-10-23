@@ -19,11 +19,21 @@ function cfgWatch(cb, fail) {
 }
 // ---- helpers ----
 const W = p => p.catch(e => { throw e && e.code === 'permission-denied' ? Object.assign(new Error('Bạn không có quyền làm việc này'), { code: e.code }) : e; });
-// Offline: the write is queued by the persistent cache and syncs later, so do not block the UI waiting for the server.
-const ack = p => navigator.onLine ? W(p) : (p.catch(() => {}), Promise.resolve());
+// Writes never block the UI for long and never vanish. Resolves {confirmed:true} once the server acked, or {confirmed:false, done} when it is
+// still queued/slow after a short wait (offline write is kept by the persistent cache). A rejection that arrives LATER is never swallowed:
+// tracked writes (o.track, i.e. entries) are followed through `done` by the caller's outbox; others raise an 'aaba:werr' event.
+const SOFT = 4000;
+function ack(p, track) {
+  const w = W(p);
+  return new Promise((res, rej) => {
+    let fin = false;
+    const t = setTimeout(() => { if (fin) return; fin = true; if (!track) w.catch(e => dispatchEvent(new CustomEvent('aaba:werr', { detail: e }))); else w.catch(() => {}); res({ confirmed: false, done: w }); }, navigator.onLine ? SOFT : 600);
+    w.then(() => { clearTimeout(t); if (!fin) { fin = true; res({ confirmed: true, done: w }); } }, e => { clearTimeout(t); if (!fin) { fin = true; rej(e); } });
+  });
+}
 const ref = (col, id) => col === 'config' ? F.doc(db, 'config', 'main') : F.doc(db, col, id);
 const conv = d => { for (const k in d) { const v = d[k]; if (v && typeof v.toMillis === 'function') d[k] = v.toMillis(); } return d; };
-const docOf = s => conv({ id: s.id, ...s.data({ serverTimestamps: 'estimate' }) });
+const docOf = s => conv({ id: s.id, ...s.data({ serverTimestamps: 'estimate' }), ...(s.metadata.hasPendingWrites && { _pend: true }) });
 const VIRTUAL_CONFIG = () => ({ id: 'main', _virtual: true, className: '', school: '', cycleWeeks: 4, currentCycleId: null, baseScore: 100, categories: CATEGORIES, titles: TITLES });
 // invites/members carry join secrets: non-dev roles may only query the low roles (matches firestore.rules).
 const base = col => { const c = F.collection(db, col); return (col === 'invites' || col === 'members') && myRole !== 'dev' ? F.query(c, F.where('role', 'in', ['recorder', 'teacher', 'student'])) : c; };
@@ -112,17 +122,22 @@ export async function entriesBetween(a, b, limit = 1000) {
   return { docs: docs.slice(0, limit), truncated: docs.length > limit };
 }
 // entries: `at` is the server time (rules require at==request.time) unless raw (dev import keeps original values).
-export async function set(col, id, data, o = {}) {
+export function set(col, id, data, o = {}) {
   const d = prep(col, data, o);
-  await ack(o.merge ? F.setDoc(ref(col, id), d, { merge: true }) : F.setDoc(ref(col, id), d));
+  return ack(o.merge ? F.setDoc(ref(col, id), d, { merge: true }) : F.setDoc(ref(col, id), d), o.track);
 }
 // batch(ops): atomic writeBatch of [{col, id, data, merge?, at?, raw?}] (<=500). Same offline ack behaviour as set.
-export async function batch(ops) {
+export function batch(ops, { track = false } = {}) {
   const b = F.writeBatch(db);
   for (const { col, id, data, ...o } of ops) { const d = prep(col, data, o); o.merge ? b.set(ref(col, id), d, { merge: true }) : b.set(ref(col, id), d); }
-  await ack(b.commit());
+  return ack(b.commit(), track);
 }
-export async function remove(col, id) { await ack(F.deleteDoc(ref(col, id))); }
+export function remove(col, id) { return ack(F.deleteDoc(ref(col, id))); }
+// Where is this doc? 'pending' (queued locally), 'server' (exists there), 'missing' (rejected/never sent) or 'unknown' (offline).
+export async function probe(col, id) {
+  try { const c = await F.getDocFromCache(ref(col, id)); if (c.exists() && c.metadata.hasPendingWrites) return 'pending'; } catch {}
+  try { const s = await F.getDocFromServer(ref(col, id)); docsIn++; return s.exists() ? 'server' : 'missing'; } catch { return 'unknown'; }
+}
 export const uid = async () => auth.currentUser.uid;
 // Called after the member doc is written: start watching it and revive listeners that failed before joining.
 export function remember(u, r) { if (r) myRole = r; watchSelf(u || auth.currentUser.uid); subs.forEach(s => s.dead && s.start()); }

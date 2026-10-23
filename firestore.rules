@@ -101,9 +101,10 @@ service cloud.firestore {
       let m = me();
       let rule = docOf('rules', d.ruleId);
       return m.role in ['recorder', 'teacher', 'admin']
-        && d.keys().hasOnly(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy', 'addedAt', 'replaces'])
+        && d.keys().hasOnly(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'byRole', 'byGroup', 'at', 'status', 'voidReason', 'voidBy', 'addedAt', 'replaces'])
         && d.keys().hasAll(['cycleId', 'groupId', 'studentId', 'ruleId', 'ruleName', 'cat', 'unit', 'qty', 'points', 'note', 'by', 'byName', 'at', 'status', 'voidReason', 'voidBy'])
         && d.by == uid() && entryTime(d, m) && d.byName == m.name
+        && (!('byRole' in d) || d.byRole == m.role) && (!('byGroup' in d) || d.byGroup == optNull(m, 'groupId'))
         && d.cycleId == docOf('config', 'main').currentCycleId
         && d.groupId is string && strOrNull(d.studentId)
         && d.unit is number && d.qty is int && d.qty >= 1 && d.points == d.unit * d.qty

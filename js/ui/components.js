@@ -50,16 +50,21 @@ export function bell() {
   return a;
 }
 
+const ROLE_VI = { recorder: 'cán sự ghi điểm', teacher: 'giáo viên', admin: 'quản trị', dev: 'quản trị' };
+// Sync state of an entry: failed | queued | sending | '' (confirmed). _out comes from the outbox, _pend from the Firestore snapshot.
+export const syncOf = e => (e.status === 'failed' || e._out === 'error' ? 'failed' : e._out === 'queued' ? 'queued' : e._out === 'sending' || e._pend ? 'sending' : '');
+const SYNC_VI = { failed: 'chưa gửi được', queued: 'chờ mạng để gửi', sending: 'đang gửi' };
 export function entryRow(e, { group, student, onOpen, catId } = {}) {
-  const who = e.studentId ? student?.name || 'Học sinh đã xoá' : 'Cả tổ';
+  const who = e.studentId ? student?.name || 'Học sinh đã xoá' : group?.name || 'cả tổ', sync = syncOf(e);
   const cat = catId || e.catId || e.categoryId || e.cat;
   const amt = h('span', { class: 'amt ' + (e.points > 0 ? 'pos' : e.points < 0 ? 'neg' : '') }, fmtPts(e.points));
-  const row = h('div', { class: 'entry' + (e.status === 'void' ? ' is-void' : '') + (onOpen ? ' pressable' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
+  const row = h('div', { class: 'entry' + (e.status === 'void' ? ' is-void' : '') + (sync === 'failed' ? ' is-fail' : '') + (onOpen ? ' pressable' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
     h('span', { class: 'ico-tile', 'aria-hidden': 'true' }, icon(CAT_ICON[cat] || 'flag', 20)),
     h('div', { class: 'entry-main' },
-      h('div', { class: 'entry-name' }, e.ruleName, e.addedAt && h('span', { class: 'tag' }, 'Bổ sung'), e.replaces && h('span', { class: 'tag' }, 'Bản sửa')),
-      h('div', { class: 'entry-sub muted' }, `${group?.name || ''} · ${who} · ${relTime(e.at)}`)),
+      h('div', { class: 'entry-name' }, h('b', null, e.byName || 'Không rõ người ghi'), ' đã ghi ', e.ruleName, ' cho ', who, e.addedAt && h('span', { class: 'tag' }, 'Bổ sung'), e.replaces && h('span', { class: 'tag' }, 'Bản sửa')),
+      h('div', { class: 'entry-sub muted' }, `${group?.name || ''}${e.byRole && ROLE_VI[e.byRole] ? ' · ' + ROLE_VI[e.byRole] : ''} · ${relTime(e.at)}`)),
     h('div', { class: 'entry-pts' }, amt,
+      sync && h('span', { class: 'pend' + (sync === 'failed' ? ' err' : '') }, icon(sync === 'failed' ? 'x' : 'clock', 14), SYNC_VI[sync]),
       e.status === 'pending' && h('span', { class: 'pend' }, icon('clock', 14), 'chờ xác nhận'),
       e.status === 'void' && h('span', { class: 'void-t' }, 'Đã thu hồi')));
   if (onOpen) {
@@ -115,9 +120,10 @@ export function reasonSheet({ title, text, label, onSubmit }) {
 
 export function entrySheet(e, { group, student, readOnly } = {}) {
   const kv = (k, v) => h('div', { class: 'kv' }, h('span', { class: 'muted' }, k), h('span', null, v));
-  const status = { ok: chip('đã xác nhận', 'pos'), pending: chip('chờ xác nhận', 'warn'), void: chip('Đã thu hồi', 'neg') }[e.status];
-  const canVoid = !readOnly && e.status !== 'void' && can('void', { entry: e });
-  const canEdit = !readOnly && e.status !== 'void' && can('backdate');
+  const status = { ok: chip('đã xác nhận', 'pos'), pending: chip('chờ xác nhận', 'warn'), void: chip('Đã thu hồi', 'neg'), failed: chip('Chưa gửi được', 'neg') }[e.status];
+  const sync = syncOf(e), failed = sync === 'failed', live = !failed && e.status !== 'void';
+  const canVoid = !readOnly && live && can('void', { entry: e });
+  const canEdit = !readOnly && live && can('backdate');
   const canPurge = can('purge', { entry: e });
   const stamp = t => `${fmtDate(t)} ${fmtTime(t)}`;
   const edit = () => act(async () => {
@@ -132,7 +138,12 @@ export function entrySheet(e, { group, student, readOnly } = {}) {
     kv('Thời gian', stamp(e.at)),
     e.addedAt && kv('Bổ sung', `Ghi lúc ${stamp(e.addedAt)} bởi ${e.byName}`),
     e.replaces && kv('Bản sửa', 'Thay cho một dòng đã thu hồi'),
-    kv('Người ghi', e.byName), kv('Trạng thái', status),
+    kv('Người ghi', `${e.byName || 'Không rõ'}${e.byRole && ROLE_VI[e.byRole] ? ` (${ROLE_VI[e.byRole]})` : ''}`), kv('Trạng thái', status),
+    sync && kv('Đồng bộ', SYNC_VI[sync]),
+    failed && store.entryError(e.id) && h('p', { class: 'form-err', role: 'alert' }, errMsg(store.entryError(e.id))),
+    failed && h('div', { class: 'row-btns detail-acts' },
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => { sh.close(); store.dismissEntry(e.id); } }, 'Bỏ qua'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { sh.close(); store.retryEntry(e.id); } }, 'Gửi lại')),
     e.note && kv('Ghi chú', e.note),
     e.status === 'void' && kv('Lý do thu hồi', e.voidReason),
     (canVoid || canEdit) && h('div', { class: 'row-btns detail-acts' },

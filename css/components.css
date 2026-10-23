@@ -52,6 +52,8 @@
 .amt{font-size:var(--fs-17);font-weight:700}.amt.pos{color:var(--pos-text)}.amt.neg{color:var(--neg-text)}
 .pend{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-12);font-weight:600;color:var(--warn-text)}
 .void-t{font-size:var(--fs-12);color:var(--text-2)}
+.pend.err{color:var(--neg-text)}.entry.is-fail{outline:1px dashed var(--neg-text);outline-offset:-1px}.entry-name b{font-weight:700}
+.sync-st{font-size:var(--fs-13);font-weight:600;color:var(--text-2);text-align:center}.sync-st.err{color:var(--neg-text)}.sync-st.ok{color:var(--pos-text)}
 /* empty + skeleton */
 .empty{display:grid;justify-items:center;gap:var(--sp-3);text-align:center;padding:var(--sp-8) var(--sp-4)}
 .empty p{max-width:34ch}

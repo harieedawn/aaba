@@ -15,7 +15,7 @@
  */
 import { BACKEND, APP_VERSION } from '../config.js';
 import { getSession, setSession, can, role, clearGate } from '../session.js';
-import { bind, invalidateWeek } from './weekstore.js';
+import { bind, invalidateWeek, track, reconcile } from './weekstore.js';
 import { weekStart, weekKey } from '../weeks.js';
 import { baseOf } from '../scoring.js';
 const inv = at => invalidateWeek(weekKey(weekStart(at)));
@@ -30,6 +30,7 @@ export async function init() {
   let { session } = await A.init();
   if (session?.role === 'guest') session = await guestInit(session);
   setSession(session);
+  reconcile();
   return session;
 }
 // Guest: picked student lives only in localStorage (no Firestore write). Guest loses access when openView turns off.
@@ -86,7 +87,8 @@ export function on(col, cb, opts = {}) {
     if (!g.cbs.size) { g.stop?.(); if (hub.get(key) === g) hub.delete(key); }
   };
 }
-export { pendingEntries, studentEntries, onWeek, weekEntries, invalidateWeek, stats } from './weekstore.js';
+export { pendingEntries, studentEntries, onWeek, weekEntries, invalidateWeek, stats, entryState, entryError, onOutbox, retryEntry, dismissEntry } from './weekstore.js';
+export const newEntryId = () => 'e_' + Date.now().toString(36) + rand(4);
 const BACK = 199 * 864e5;
 async function build(e) {
   const s = getSession();
@@ -103,20 +105,20 @@ async function build(e) {
   need(rule.scope !== 'student' || studentId, 'Cần chọn học sinh');
   const qty = rule.perUnit ? Math.min(99, Math.max(1, e.qty | 0)) : 1, points = rule.points * qty;
   const doc = {
-    cycleId: cfg.currentCycleId, groupId: e.groupId, studentId, ruleId: e.ruleId,
+    cycleId: cfg?.currentCycleId ?? null, groupId: e.groupId, studentId, ruleId: e.ruleId,
     ruleName: rule.name, cat: rule.cat, unit: rule.points, qty, points, note: String(e.note || '').trim().slice(0, 500),
-    by: s.uid, byName: s.role === 'dev' ? 'Quản trị' : s.name, at: at ?? Date.now(),
+    by: s.uid, byName: s.role === 'dev' ? 'Quản trị' : s.name || '', byRole: s.role, byGroup: s.groupId ?? null, at: at ?? Date.now(),
     status: role() === 'recorder' && points > 0 ? 'pending' : 'ok', voidReason: '', voidBy: '',
   };
   if (e.replaces) doc.replaces = String(e.replaces);
-  return { id: 'e_' + Date.now().toString(36) + rand(4), doc, at };
+  return { id: e.id || newEntryId(), doc, at };
 }
 // e.at (ms) = admin back-dated entry (rules: addedAt = server time). Normal entries use server time.
 export async function addEntry(e) {
   const { id, doc, at } = await build(e);
-  await A.set('entries', id, doc, at == null ? {} : { at });
+  const entry = { id, ...doc }, it = await track(entry, [{ col: 'entries', id, data: doc, ...(at != null && { at }) }]);
   if (at != null) inv(at);
-  return { id, ...doc };
+  return { ...entry, _out: it.state };
 }
 // Sửa = ONE batch: new entry (replaces: oldId) + void the old one. Never mutates entry fields in place.
 export async function editEntry(oldId, e) {
@@ -124,10 +126,10 @@ export async function editEntry(oldId, e) {
   const old = await A.get('entries', oldId);
   need(old && old.status !== 'void', 'Dòng này đã được thu hồi');
   const { id, doc, at } = await build({ ...e, at: e.at ?? old.at, replaces: oldId });
-  await A.batch([{ col: 'entries', id, data: doc, at },
+  const entry = { id, ...doc }, it = await track(entry, [{ col: 'entries', id, data: doc, ...(at != null && { at }) },
     { col: 'entries', id: oldId, data: { status: 'void', voidReason: 'Sửa lại', voidBy: getSession().uid }, merge: true }]);
   inv(old.at); inv(at);
-  return { id, ...doc };
+  return { ...entry, _out: it.state };
 }
 export async function ruleUsable(id) { const r = await A.get('rules', id); return !!r && r.active !== false; }
 // Xoá hẳn: only voided entries (rules enforce it too). Returns the number deleted.
