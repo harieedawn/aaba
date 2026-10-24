@@ -48,6 +48,9 @@ async function boot() {
   addEventListener('aaba:werr', ev => toast(errMsg(ev.detail))); // a queued write the server rejected later is never silent
   initTheme();
   initAppearance();
+  const typing = e => e.target.matches?.('textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=button])');
+  addEventListener('focusin', e => { if (typing(e)) document.documentElement.classList.add('kb'); });
+  addEventListener('focusout', () => document.documentElement.classList.remove('kb'));
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(() => {});
   const root = $('#app');
   try { await store.init(); } catch (err) {

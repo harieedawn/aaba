@@ -21,10 +21,10 @@ const initials = n => { const w = String(n || '?').trim().split(/\s+/); return (
 
 function installHint() {
   if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return null;
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   return h('section', { class: 'card' }, h('div', { class: 'sec-h' }, h('h2', null, 'Cài ứng dụng')),
-    h('p', { class: 'muted' }, ios ? 'Trên iPhone/iPad: bấm nút Chia sẻ (Share) rồi chọn “Thêm vào Màn hình chính” (Add to Home Screen).'
-      : 'Mở menu của trình xác nhận và chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”.'));
+    h('p', { class: 'muted' }, ios ? 'Trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ (Share) rồi chọn “Thêm vào Màn hình chính” (Add to Home Screen).'
+      : 'Mở menu của trình duyệt và chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”.'));
 }
 
 export default function me() {

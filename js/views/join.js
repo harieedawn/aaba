@@ -25,6 +25,7 @@ export default function join({ params }) {
     const errEl = h('div', { class: 'form-err', role: 'alert', hidden: !err }, err);
     const btn = h('button', { class: 'btn btn-accent', type: 'button' }, 'Tham gia');
     const go = async raw => {
+      if (btn.disabled) return;
       const c = clean(raw ?? input.value);
       if (!c) { errEl.hidden = false; errEl.textContent = ERR.empty; return; }
       btn.disabled = true; errEl.hidden = true;

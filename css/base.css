@@ -1,5 +1,5 @@
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%;color-scheme:light}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;color-scheme:light;touch-action:manipulation}
 html[data-theme=dark]{color-scheme:dark}
 html.lock{overflow:hidden}
 body{margin:0;background:var(--bg);color:var(--text);font:400 var(--fs-16)/1.5 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
@@ -14,9 +14,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 svg.i{display:block;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);min-height:48px;padding:0 var(--sp-5);border-radius:var(--r-pill);background:var(--primary);color:var(--on-primary);font-weight:600}
-.btn-accent{background:var(--accent);color:var(--on-accent)}.btn-accent:hover{background:#F2C52E}
-.btn:hover{background:var(--primary-h)}
-.btn-ghost{background:var(--surface-2);color:var(--text)}.btn-ghost:hover{background:var(--border)}
+.btn-accent{background:var(--accent);color:var(--on-accent)}@media (hover:hover){.btn-accent:hover{background:#F2C52E}}
+@media (hover:hover){.btn:hover{background:var(--primary-h)}}
+.btn-ghost{background:var(--surface-2);color:var(--text)}@media (hover:hover){.btn-ghost:hover{background:var(--border)}}
 .icon-btn{position:relative;width:44px;height:44px;border-radius:var(--r-pill);display:inline-grid;place-items:center;color:var(--text-2)}
-.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+@media (hover:hover){.icon-btn:hover{background:var(--surface-2);color:var(--text)}}
 .link{color:var(--text);text-decoration:underline;text-underline-offset:3px;font-size:var(--fs-13);font-weight:600;padding:var(--sp-3) 0}

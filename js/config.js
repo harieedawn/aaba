@@ -10,4 +10,4 @@ export const FIREBASE_CONFIG = {
   appId: '1:395232527734:web:5395fa58f86504131b2657',
 };
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';

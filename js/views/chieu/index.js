@@ -36,7 +36,7 @@ export default function chieu({ params: [key] }) {
   const bPrev = zPrev.firstChild, bNext = zNext.firstChild;
   const ind = h('span', { class: 'ch-ind', hidden: true }, 'Đang ẩn tên · nhấn H để hiện');
   const root = h('div', { class: 'ch', role: 'dialog', 'aria-label': 'Trình chiếu' }, box,
-    btn('ch-czl', 'Thoát', 'x', exit), btn('ch-czr', 'Toàn màn hình (F)', 'expand', () => toggleFs(root)),
+    btn('ch-czl', 'Thoát', 'x', exit), (document.fullscreenEnabled || document.webkitFullscreenEnabled) ? btn('ch-czr', 'Toàn màn hình (F)', 'expand', () => toggleFs(root)) : null,
     zPrev, zNext, ind, h('div', { class: 'ch-foot' }, dots, cnt));
 
   function nav() {

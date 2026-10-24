@@ -12,7 +12,7 @@ export function parseRoster(text) {
     if (line.startsWith('#')) { out.push({ group: line.replace(/^#+\s*/, '').trim(), names: [] }); continue; }
     const name = line.replace(/^(?:[-*•]|\d+[.)])\s*/, '').trim();
     if (!out.length) throw new Error('Thiếu dòng tên tổ, ví dụ: # Tổ 1');
-    if (name) out.at(-1).names.push(name);
+    if (name) out[out.length - 1].names.push(name);
   }
   return out.filter(x => x.group);
 }

@@ -1,8 +1,8 @@
 /* Giao diện: màu chủ đạo (Phần 1). Loaded last. Overrides only apply when a colour is chosen. */
-html[data-accent] .btn-accent:hover,html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}
+@media (hover:hover){html[data-accent] .btn-accent:hover,html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}}
 html[data-accent] .pill-live,html[data-accent] .tag.pill-live,html[data-accent] .ch-tag,html[data-accent] .pd-ul,html[data-accent] .ch-ul{background:var(--accent);color:var(--on-accent)}
-html[data-accent] .nav-item:hover{background:var(--surface-2)}
-html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}
+@media (hover:hover){html[data-accent] .nav-item:hover{background:var(--surface-2)}}
+@media (hover:hover){html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}}
 
 .ap-card{display:flex;flex-direction:column;gap:var(--sp-4)}
 .ap-card .sec-h{margin:0}

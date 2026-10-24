@@ -39,8 +39,8 @@
 .ch-box{cursor:pointer}.ch-idle .ch-box{cursor:none}
 .ch-lines li,.ch-ol li,.ch-star,.pd-col,.ch-tile{transition:transform .15s ease-out,background-color .15s ease-out}
 .ch-lines li{padding:calc(var(--s)*.2) calc(var(--s)*.8);margin:0 calc(var(--s)*-.8);border-radius:var(--r-s)}
-.ch-lines li:hover,.ch-star:hover{transform:translateY(-2px);background:var(--gt)}.ch-ol li:hover{transform:translateY(-2px);background:var(--surface-2)}
-.ch-tile:hover{transform:scale(1.04)}.pd-col:hover{transform:scale(1.02)}
+@media (hover:hover){.ch-lines li:hover,.ch-star:hover{transform:translateY(-2px);background:var(--gt)}.ch-ol li:hover{transform:translateY(-2px);background:var(--surface-2)}}
+@media (hover:hover){.ch-tile:hover{transform:scale(1.04)}.pd-col:hover{transform:scale(1.02)}}
 }
 /* stacked / portrait: podium = ranked list, best on top, revealed bottom-up */
 @media (max-width:899px),(orientation:portrait){

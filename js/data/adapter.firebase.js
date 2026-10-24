@@ -58,7 +58,7 @@ export async function init() {
   AU = au; F = fs;
   const app = AP.initializeApp(FIREBASE_CONFIG);
   try { db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
-  catch { db = F.getFirestore(app); }
+  catch { try { db = F.initializeFirestore(app, { localCache: F.memoryLocalCache() }); } catch { db = F.getFirestore(app); } }
   auth = AU.getAuth(app);
   const user = await new Promise(res => { const off = AU.onAuthStateChanged(auth, u => { off(); res(u); }); });
   if (!user) await AU.signInAnonymously(auth);

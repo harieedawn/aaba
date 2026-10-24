@@ -35,7 +35,7 @@
 /* last resort when even the trimmed list does not fit at the smallest scale */
 .ch-s.ch-scroll{overflow-y:auto;overscroll-behavior:contain}
 /* modal */
-.tp-ov{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.62);animation:tp-fade .18s ease-out;touch-action:none;user-select:text;-webkit-user-select:text;cursor:default}
+.tp-ov{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.62);animation:tp-fade .18s ease-out;touch-action:none;-webkit-user-select:text;user-select:text;-webkit-user-select:text;cursor:default}
 .tp-md{display:flex;flex-direction:column;width:min(92vw,36rem);height:min(78dvh,34rem);height:min(78vh,34rem);background:var(--surface);color:var(--text);border-radius:var(--r-l);box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;animation:tp-pop .2s cubic-bezier(.2,.8,.2,1);font-size:clamp(15px,calc(var(--s)*1.9),21px)}
 .tp-mh{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 16px 12px 20px;border-bottom:2px solid var(--border)}
 .tp-md[class*=" g-"] .tp-mh{border-top:6px solid var(--gc)}
