@@ -1,0 +1,125 @@
+/* Giao diện: màu chủ đạo (Phần 1). Loaded last. Overrides only apply when a colour is chosen. */
+html[data-accent] .btn-accent:hover,html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}
+html[data-accent] .pill-live,html[data-accent] .tag.pill-live,html[data-accent] .ch-tag,html[data-accent] .pd-ul,html[data-accent] .ch-ul{background:var(--accent);color:var(--on-accent)}
+html[data-accent] .nav-item:hover{background:var(--surface-2)}
+html[data-accent] .nav-item.ghi:hover{background:var(--acc-h)}
+
+.ap-card{display:flex;flex-direction:column;gap:var(--sp-4)}
+.ap-card .sec-h{margin:0}
+.ap-block{display:flex;flex-direction:column;gap:var(--sp-3)}
+.ap-h{font-size:var(--fs-15)}
+.ap-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap}
+.ap-lbl{display:flex;align-items:center;gap:var(--sp-3);font-weight:600;min-height:44px}
+.ap-hint{font-size:var(--fs-13);margin:0}
+.ap-prev{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-s);background:var(--surface-2)}
+.ap-prev-pill{display:inline-flex;align-items:center;min-height:36px;padding:0 var(--sp-4);border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);font-weight:700}
+.ap-prev-dot{width:28px;height:28px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--surface)}
+.ap-hue{-webkit-appearance:none;appearance:none;width:100%;height:14px;margin:15px 0;border-radius:var(--r-pill);outline-offset:6px;--ap-c:#FFD23F}
+.ap-hue::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:44px;height:44px;border-radius:50%;background:var(--ap-c);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.ap-hue::-moz-range-thumb{width:36px;height:36px;border-radius:50%;background:var(--ap-c);border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.ap-sws{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:var(--sp-2);justify-items:center}
+.ap-sw{width:44px;height:44px;border-radius:50%;border:2px solid var(--border)}
+.ap-sw[aria-pressed=true]{border-color:var(--text);box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--text)}
+.ap-color{width:52px;height:44px;padding:2px;border:1px solid var(--border);border-radius:var(--r-s);background:var(--surface);cursor:pointer}
+.ap-reset{min-height:44px}
+.ap-switch{position:relative;flex:none;width:56px;height:44px;border-radius:var(--r-pill);background:transparent}
+.ap-switch::before{content:"";position:absolute;left:0;right:0;top:50%;height:32px;margin-top:-16px;border-radius:var(--r-pill);background:var(--border);transition:background var(--d2)}
+.ap-knob{position:absolute;top:50%;left:4px;width:26px;height:26px;margin-top:-13px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform var(--d2) var(--ease-out)}
+.ap-switch[aria-checked=true]::before{background:var(--pos)}
+.ap-switch[aria-checked=true] .ap-knob{transform:translateX(24px)}
+
+/* ===== Liquid Glass (Phần 2). Everything is gated by data-glass=lite|full, so "off" costs nothing. ===== */
+:root[data-glass=lite],:root[data-glass=full]{
+  --g-fill:rgba(255,255,255,.64);--g-fill-hi:rgba(255,255,255,.82);--g-fill-2:rgba(243,239,230,.6);
+  --g-bf:blur(18px) saturate(180%);--g-edge:rgba(255,255,255,.55);
+  --g-hl:inset 0 1px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.22);
+  --g-sh:0 8px 28px rgba(31,36,48,.10);--g-blob:block;
+  --spring:cubic-bezier(.34,1.56,.64,1);--spring-sheet:cubic-bezier(.2,.9,.25,1)
+}
+:root[data-glass=lite][data-theme=dark],:root[data-glass=full][data-theme=dark]{
+  --g-fill:rgba(27,30,37,.62);--g-fill-hi:rgba(27,30,37,.84);--g-fill-2:rgba(37,41,50,.6);
+  --g-edge:rgba(255,255,255,.12);
+  --g-hl:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.05);--g-sh:0 8px 28px rgba(0,0,0,.35)
+}
+@supports (color:color-mix(in srgb,red 50%,transparent)){
+  :root[data-glass=lite],:root[data-glass=full]{
+    --g-fill:color-mix(in srgb,var(--surface) 64%,transparent);--g-fill-hi:color-mix(in srgb,var(--surface) 84%,transparent);
+    --g-fill-2:color-mix(in srgb,var(--surface-2) 62%,transparent)
+  }
+}
+@supports (animation-timing-function:linear(0,1)){
+  :root[data-glass=full]{
+    --spring:linear(0,.009,.035 2.1%,.141 4.4%,.723 12.9%,.938 16.7%,1.017 19.4%,1.077 22.4%,1.121 25.6%,1.149 29.2%,1.159 33.3%,1.15 37.2%,1.119 41.7%,1.034 51.7%,1.003 57.2%,.989 63.4%,.987 69.4%,.999 83.3%,1);
+    --spring-sheet:linear(0,.02 2%,.2 8%,.55 17%,.82 28%,.96 40%,1.012 52%,1.006 65%,1)
+  }
+}
+/* Fallbacks: no backdrop-filter or reduced transparency => solid surfaces, no blur, no blobs. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-glass]{--g-fill:var(--surface)!important;--g-fill-hi:var(--surface)!important;--g-fill-2:var(--surface-2)!important;--g-bf:none!important;--g-blob:none!important}
+}
+@media (prefers-reduced-transparency:reduce){
+  :root[data-glass]{--g-fill:var(--surface)!important;--g-fill-hi:var(--surface)!important;--g-fill-2:var(--surface-2)!important;--g-bf:none!important;--g-blob:none!important;--g-hl:0 0 0 0 transparent!important}
+}
+
+/* Surfaces (not the slideshow, not repeated rows). */
+:root[data-glass=lite] body:not(.chieu-on) .nav,:root[data-glass=lite] body:not(.chieu-on) .card:not(li .card):not(.lb-row),:root[data-glass=lite] body:not(.chieu-on) .sheet,:root[data-glass=lite] body:not(.chieu-on) .toast,:root[data-glass=lite] body:not(.chieu-on) .seg,:root[data-glass=lite] body:not(.chieu-on) .lb-hero,:root[data-glass=lite] body:not(.chieu-on) .btn:not(li .btn),
+:root[data-glass=full] body:not(.chieu-on) .nav,:root[data-glass=full] body:not(.chieu-on) .card:not(li .card):not(.lb-row),:root[data-glass=full] body:not(.chieu-on) .sheet,:root[data-glass=full] body:not(.chieu-on) .toast,:root[data-glass=full] body:not(.chieu-on) .seg,:root[data-glass=full] body:not(.chieu-on) .lb-hero,:root[data-glass=full] body:not(.chieu-on) .btn:not(li .btn){
+  -webkit-backdrop-filter:var(--g-bf);backdrop-filter:var(--g-bf);box-shadow:var(--g-hl),var(--g-sh)
+}
+:root[data-glass=lite] body:not(.chieu-on) .nav,
+:root[data-glass=full] body:not(.chieu-on) .nav{background:var(--g-fill-hi);border-color:var(--g-edge)}
+:root[data-glass=lite] body:not(.chieu-on) .card,
+:root[data-glass=full] body:not(.chieu-on) .card{background:var(--g-fill);border-color:var(--g-edge)}
+:root[data-glass=lite] body:not(.chieu-on) .lb-row,
+:root[data-glass=full] body:not(.chieu-on) .lb-row{background:var(--g-fill);border-color:var(--g-edge)}
+:root[data-glass=lite] body:not(.chieu-on) .sheet,
+:root[data-glass=full] body:not(.chieu-on) .sheet{background:var(--g-fill-hi);border:1px solid var(--g-edge);border-bottom:0}
+:root[data-glass=lite] body:not(.chieu-on) .toast,
+:root[data-glass=full] body:not(.chieu-on) .toast{background:color-mix(in srgb,var(--text) 82%,transparent)}
+:root[data-glass=lite] body:not(.chieu-on) .seg,
+:root[data-glass=full] body:not(.chieu-on) .seg{background:var(--g-fill-2);box-shadow:var(--g-hl)}
+:root[data-glass=lite] body:not(.chieu-on) .btn,
+:root[data-glass=full] body:not(.chieu-on) .btn{background:color-mix(in srgb,var(--primary) 82%,transparent)}
+:root[data-glass=lite] body:not(.chieu-on) .btn-accent,
+:root[data-glass=full] body:not(.chieu-on) .btn-accent{background:color-mix(in srgb,var(--accent) 88%,transparent)}
+:root[data-glass=lite] body:not(.chieu-on) .btn-ghost,
+:root[data-glass=full] body:not(.chieu-on) .btn-ghost{background:var(--g-fill-2)}
+:root[data-glass=lite] body:not(.chieu-on) .btn-danger,
+:root[data-glass=full] body:not(.chieu-on) .btn-danger{background:color-mix(in srgb,var(--neg) 88%,transparent)}
+:root[data-glass=lite] body:not(.chieu-on) .lb-hero,
+:root[data-glass=full] body:not(.chieu-on) .lb-hero{background:color-mix(in srgb,var(--gc) 90%,transparent);border:1px solid var(--g-edge)}
+:root[data-glass=lite] body:not(.chieu-on) .nav-item.ghi .ico,
+:root[data-glass=full] body:not(.chieu-on) .nav-item.ghi .ico{box-shadow:var(--g-hl),var(--g-sh)}
+@supports not (color:color-mix(in srgb,red 50%,transparent)){
+  :root[data-glass=lite] body:not(.chieu-on) .toast,:root[data-glass=lite] body:not(.chieu-on) .btn,:root[data-glass=lite] body:not(.chieu-on) .btn-accent,:root[data-glass=lite] body:not(.chieu-on) .btn-danger,:root[data-glass=lite] body:not(.chieu-on) .lb-hero,
+  :root[data-glass=full] body:not(.chieu-on) .toast,:root[data-glass=full] body:not(.chieu-on) .btn,:root[data-glass=full] body:not(.chieu-on) .btn-accent,:root[data-glass=full] body:not(.chieu-on) .btn-danger,:root[data-glass=full] body:not(.chieu-on) .lb-hero{-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+/* Slideshow: fully excluded (projector + fit engine). */
+.ch,.ch *,body.chieu-on *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* Đầy đủ: ambient blobs + springs. Blobs are radial gradients (already soft); only transform animates. */
+:root[data-glass=full]::before{
+  content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;display:var(--g-blob);
+  background:
+    radial-gradient(38% 34% at 22% 24%,rgba(255,210,63,.34),transparent 70%),
+    radial-gradient(34% 32% at 80% 30%,rgba(120,150,255,.22),transparent 70%),
+    radial-gradient(40% 36% at 60% 82%,rgba(255,120,170,.20),transparent 70%);
+  animation:ap-drift 48s ease-in-out infinite alternate;will-change:transform
+}
+@supports (color:color-mix(in srgb,red 50%,transparent)){
+  :root[data-glass=full]::before{background:
+    radial-gradient(38% 34% at 22% 24%,color-mix(in srgb,var(--accent) 38%,transparent),transparent 70%),
+    radial-gradient(34% 32% at 80% 30%,color-mix(in srgb,color-mix(in srgb,var(--accent) 40%,#7896ff) 55%,transparent),transparent 70%),
+    radial-gradient(40% 36% at 60% 82%,color-mix(in srgb,var(--accent) 30%,#ff78aa),transparent 70%)}
+}
+:root[data-glass=full][data-theme=dark]::before{opacity:.55}
+:root:has(body.chieu-on)::before{display:none!important}
+@keyframes ap-drift{from{transform:translate3d(-3%,-2%,0) scale(1)}to{transform:translate3d(3%,2%,0) scale(1.08)}}
+:root[data-glass=full] body:not(.chieu-on) .pressable{transition:transform 420ms var(--spring)}
+:root[data-glass=full] body:not(.chieu-on) .pressable:active{transform:scale(.94)}
+:root[data-glass=full] body:not(.chieu-on) .sheet{animation:sheet-in 520ms var(--spring-sheet)}
+:root[data-glass=full] body:not(.chieu-on) .toast{animation:toast-in 480ms var(--spring)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-glass]::before{animation:none!important}
+  :root[data-glass] .pressable,:root[data-glass] .sheet,:root[data-glass] .toast{animation:none!important;transition:none!important}
+}

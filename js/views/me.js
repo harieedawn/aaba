@@ -9,7 +9,8 @@ import { personalPoints } from '../scoring.js';
 import { weekStart, WEEK } from '../weeks.js';
 import { fmtPts } from '../format.js';
 import { pageHeader, live, entryRow, entrySheet, emptyState } from '../ui/components.js';
-import { getSession, can, role, setPreview, ROLE_LABEL, getThemePref, setTheme } from '../session.js';
+import { getSession, can, role, setPreview, ROLE_LABEL } from '../session.js';
+import { appearanceCard } from '../ui/appearance-ui.js';
 import { APP_VERSION } from '../config.js';
 import { act } from '../ui/act.js';
 
@@ -17,15 +18,6 @@ const link = (href, ic, label, badge) => h('a', { class: 'row-link pressable', h
   icon(ic, 22), h('span', { class: 'grow' }, label), badge ? h('span', { class: 'badge' }, badge) : null, icon('chevron', 20));
 
 const initials = n => { const w = String(n || '?').trim().split(/\s+/); return ((w.length > 1 ? w[0][0] + w[w.length - 1][0] : w[0].slice(0, 2))).toUpperCase(); };
-
-function themeSeg() {
-  const opts = [['light', 'Sáng'], ['dark', 'Tối'], ['auto', 'Tự động']];
-  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Giao diện' });
-  const paint = () => [...seg.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === getThemePref())));
-  opts.forEach(([v, l]) => seg.append(h('button', { type: 'button', 'data-v': v, onclick: () => { setTheme(v); paint(); } }, l)));
-  paint();
-  return seg;
-}
 
 function installHint() {
   if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return null;
@@ -45,7 +37,7 @@ export default function me() {
   const stop = live(body, ['config', 'groups', 'students', 'entries', 'pending'], S => {
     const s = getSession(), r = role(), guest = s.role === 'guest';
     const codeLink = h('section', { class: 'card' }, h('a', { class: 'link', href: '#/join' }, 'Tôi có mã đăng nhập'));
-    if (guest && !s.studentId) return [pageHeader('Tôi'), namePicker(S.groups, S.students), codeLink, h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg())];
+    if (guest && !s.studentId) return [pageHeader('Tôi'), namePicker(S.groups, S.students), codeLink, appearanceCard()];
     queueMicrotask(markSeen);
     const nf = notifs().slice(0, 20);
     const g = S.groups.find(x => x.id === s.groupId), me0 = S.students.find(x => x.id === s.studentId), tn = titleNames(me0 || s, S.config.titles);
@@ -72,7 +64,7 @@ export default function me() {
           : emptyState({ icon: 'clock', title: 'Chưa có điểm nào', text: 'Điểm sẽ hiện ở đây khi có.' })),
       getSession().role === 'dev' && role() !== 'dev' ? h('section', { class: 'card' }, h('div', { class: 'setting' }, h('span', null, `Đang xem như: ${ROLE_LABEL[role()]}`),
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => setPreview(null) }, 'Thoát xem thử'))) : null,
-      h('section', { class: 'card' }, h('h2', { class: 'sec-h' }, 'Giao diện'), themeSeg()),
+      appearanceCard(),
       installHint(),
       guest ? h('section', { class: 'card stack' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.pickStudent(null), { btn: ev.currentTarget }) }, 'Đổi tên'),
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: ev => act(() => store.leaveGuest(), { btn: ev.currentTarget }) }, 'Đăng xuất'),

@@ -3,6 +3,7 @@ import { icon } from './ui/icons.js';
 import { logo, emptyState } from './ui/components.js';
 import * as store from './data/store.js';
 import { can, onSession, initTheme } from './session.js';
+import { initAppearance } from './appearance.js';
 import { startRouter } from './router.js';
 import { installErrors } from './errors.js';
 import { unseen, onNotif, startNotify } from './notify.js';
@@ -46,6 +47,7 @@ async function boot() {
   installErrors();
   addEventListener('aaba:werr', ev => toast(errMsg(ev.detail))); // a queued write the server rejected later is never silent
   initTheme();
+  initAppearance();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(() => {});
   const root = $('#app');
   try { await store.init(); } catch (err) {

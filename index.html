@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script>try{var p=localStorage.getItem('aaba.theme'),t=p==='dark'||(p==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.dataset.theme=t;document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.removeAttribute('media');m.content=t==='dark'?'#13151A':'#FBF8F2'})}catch(e){}</script>
+<script>try{var p=localStorage.getItem('aaba.theme'),t=p==='dark'||(p==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.dataset.theme=t;document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.removeAttribute('media');m.content=t==='dark'?'#13151A':'#FBF8F2'});var a=localStorage.getItem('aaba.accent'),c=a&&JSON.parse(localStorage.getItem('aaba.accent.css')||'null'),r=document.documentElement;c=c&&c[t];if(c){for(var k in c)r.style.setProperty(k,c[k]);r.dataset.accent='1';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.content=c['--bg']})}var g=localStorage.getItem('aaba.glass');r.dataset.glass=g==='lite'||g==='full'?g:'off'}catch(e){}</script>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="css/chieu2.css">
 <link rel="stylesheet" href="css/chieu3.css">
 <link rel="stylesheet" href="css/chieu4.css">
+<link rel="stylesheet" href="css/appearance.css">
 </head>
 <body>
 <div id="app"></div>
