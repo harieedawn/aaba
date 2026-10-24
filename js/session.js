@@ -42,6 +42,8 @@ export function can(action, ctx = {}) {
     case 'approve': return staff && (!ctx.entry || ctx.entry.by !== S.uid);
     case 'edit': case 'close': return r === 'admin' || r === 'dev';
     case 'manage': return staff;
+    case 'postNote': return staff; // class notes: teacher, admin, dev (not recorder)
+    case 'myNote': return true; // personal notes: any signed-in member role (guest returned above)
     case 'backdate': return r === 'admin' || r === 'dev';
     case 'purge': return staff && ctx.entry?.status === 'void';
     case 'createInvite':

@@ -99,6 +99,11 @@ export function watch(col, cb, opts = {}) {
         else if (opts.status) q = F.query(c, F.where('status', '==', opts.status));
         else if (opts.studentId) q = F.query(c, F.where('studentId', '==', opts.studentId));
       }
+      if (col === 'notes' || col === 'pnotes') { // index-free: ONE field per query (class: `date` range | personal: owner ==)
+        if (col === 'notes' && opts.range) q = F.query(c, F.where('date', '>=', opts.range[0]), F.where('date', '<=', opts.range[1]));
+        else if (col === 'pnotes' && opts.owner) q = F.query(c, F.where('owner', '==', opts.owner));
+        else throw new Error(col + ': a query is required (never the whole collection)');
+      }
       sub.stops.push(F.onSnapshot(q, arr, fail));
     }
   };
@@ -120,6 +125,12 @@ export async function entriesBetween(a, b, limit = 1000) {
   docsIn += s.size;
   const docs = s.docs.map(docOf);
   return { docs: docs.slice(0, limit), truncated: docs.length > limit };
+}
+// One-time fetch of class notes with `date` in [a, b] ('YYYY-MM-DD', single-field range).
+export async function notesBetween(a, b) {
+  const s = await W(F.getDocs(F.query(F.collection(db, 'notes'), F.where('date', '>=', a), F.where('date', '<=', b))));
+  docsIn += s.size;
+  return s.docs.map(docOf);
 }
 // entries: `at` is the server time (rules require at==request.time) unless raw (dev import keeps original values).
 export function set(col, id, data, o = {}) {

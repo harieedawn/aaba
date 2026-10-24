@@ -22,6 +22,8 @@ function emit(s) {
   if (col === 'config') return cb(clone({ id: 'main', ...db.config }));
   let a = Object.entries(db[col] || {}).map(([id, d]) => ({ id, ...d }));
   if (col === 'entries') a = filterEntries(a, opts);
+  if (col === 'notes' && opts.range) a = a.filter(n => n.date >= opts.range[0] && n.date <= opts.range[1]);
+  if (col === 'pnotes') a = a.filter(n => n.owner === opts.owner); // personal notes: owner only
   docsIn += col === 'entries' ? a.length : 0;
   cb(clone(a));
 }
@@ -51,6 +53,7 @@ function demoSession() {
 export async function init() {
   try { const raw = JSON.parse(localStorage.getItem(KEY)); db = raw && raw.v === 2 ? raw : null; } catch { db = null; }
   if (!db) db = buildDemo();
+  if (!db.notes || !db.pnotes) { const d = buildDemo(); db.notes ||= d.notes; db.pnotes ||= d.pnotes; } // older local data: add demo notes
   persist();
   addEventListener('storage', e => {
     if (e.key !== KEY || !e.newValue) return;
@@ -76,6 +79,9 @@ export async function entriesBetween(a, b, limit = 1000) {
   docsIn += Math.min(all.length, limit + 1);
   return { docs: all.slice(0, limit), truncated: all.length > limit };
 }
+export async function notesBetween(a, b) {
+  return clone(Object.entries(db.notes || {}).map(([id, d]) => ({ id, ...d })).filter(n => n.date >= a && n.date <= b));
+}
 export async function batch(ops) {
   for (const { col, id, data, ...o } of ops) { const d = prep(col, data, o); db[col][id] = o.merge ? { ...(db[col][id] || {}), ...d } : d; }
   persist(); [...new Set(ops.map(o => o.col))].forEach(notify);
@@ -83,7 +89,7 @@ export async function batch(ops) {
 export async function set(col, id, data, o = {}) {
   const { merge = false } = o; data = prep(col, data, o);
   if (col === 'config') db.config = merge ? { ...db.config, ...clone(data) } : clone(data);
-  else db[col][id] = merge ? { ...(db[col][id] || {}), ...clone(data) } : clone(data);
+  else (db[col] ||= {})[id] = merge ? { ...(db[col][id] || {}), ...clone(data) } : clone(data);
   persist(); notify(col);
 }
 export async function remove(col, id) { delete db[col]?.[id]; persist(); notify(col); }

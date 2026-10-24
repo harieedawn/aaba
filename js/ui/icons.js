@@ -10,6 +10,7 @@ const P = {
   check: 'M5 12.5l4.5 4.5L19 7.5',
   x: 'M6 6l12 12M18 6L6 18',
   chevron: 'M9 6l6 6-6 6',
+  note: 'M5 4h14v10l-6 6H5zM13 20v-6h6M8.5 9h7',
   recap: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
   'chevron-left': 'M15 6l-6 6 6 6',
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',

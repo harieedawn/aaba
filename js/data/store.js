@@ -16,6 +16,7 @@
 import { BACKEND, APP_VERSION } from '../config.js';
 import { getSession, setSession, can, role, clearGate } from '../session.js';
 import { bind, invalidateWeek, track, reconcile } from './weekstore.js';
+import { bind as bindNotes } from './notestore.js';
 import { weekStart, weekKey } from '../weeks.js';
 import { baseOf } from '../scoring.js';
 const inv = at => invalidateWeek(weekKey(weekStart(at)));
@@ -26,7 +27,7 @@ const need = (ok, msg = 'Bạn không có quyền làm việc này') => { if (!o
 
 export async function init() {
   A = BACKEND === 'firebase' ? await import('./adapter.firebase.js') : await import('./adapter.local.js');
-  bind(A);
+  bind(A); bindNotes(A);
   let { session } = await A.init();
   if (session?.role === 'guest') session = await guestInit(session);
   setSession(session);
@@ -88,6 +89,7 @@ export function on(col, cb, opts = {}) {
   };
 }
 export { pendingEntries, studentEntries, onWeek, weekEntries, invalidateWeek, stats, entryState, entryError, onOutbox, retryEntry, dismissEntry } from './weekstore.js';
+export { noteWatch, noteRange, noteSet, noteRemove } from './notestore.js'; // Notes (js/notes/data.js)
 export const newEntryId = () => 'e_' + Date.now().toString(36) + rand(4);
 const BACK = 199 * 864e5;
 async function build(e) {

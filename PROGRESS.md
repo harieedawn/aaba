@@ -1,6 +1,16 @@
+TODO (bắt buộc): Publish lại firestore.rules (thêm notes, pnotes)
 **TODO (bắt buộc): Re-publish firestore.rules in the Firebase console (Firestore → Rules → Publish)** — Step 4 changes the rules (backdated entries + delete of voided entries).
 
 # aaba — PROGRESS
+## Notes (stage 1 of 2) DONE
+- Class whiteboard #/notes (nav "Notes", icon note, after Tổng kết). Collections `notes` (class, teacher/admin/dev post; creator or admin/dev edit) + `pnotes` (personal, owner only). Rules added; nothing existing changed.
+- js/notes/{dates,layout,subjects,data,board,sheet,index}.js, css/notes.css, js/data/notestore.js (store re-exports noteWatch/noteRange/noteSet/noteRemove). Adapters: `watch('notes',{range:[a,b]})`, `watch('pnotes',{owner})`, `notesBetween(a,b)`; local seed has demo notes (old local data gets them on load).
+- Session: can('postNote') = staff (not recorder), can('myNote') = any member. Guests only view.
+- Phone bottom bar = 6 items for roles with Ghi điểm (centre button has a fixed 64px cell; it sits one cell right of true centre, fully centred only when there are 5 items). Rail scrolls if the screen is short.
+- Index-free queries: class = single `date` range; personal = owner ==. One live listener per kind (ref-counted), other ranges via loadClassRange.
+- `node notes.selftest.mjs` checks dates, layout and AA contrast of every subject colour (light + dark). Not browser/emulator-tested.
+- Stage 2 (calendar, agenda, past/future banner, drag-and-drop): read NOTES-SPEC.md.
+
 ## Week model v3 (log)
 - Model: week = Saturday 00:00 VN → Friday 24:00 (Sunday/Mon–Fri belong to the week begun the previous Saturday); key = ISO date of the Saturday; month = month of the Friday; scores restart each week from config.categories[].base. All in js/weeks.js (pure, VN = UTC+7 fixed; selftest under 2 TZs). Label format "T7 17/10 → T6 23/10" (day/month not zero-padded).
 - Step 1 DONE: weeks.js(+selftest); store: onWeek (auto rollover: timer + visibility/focus/online), weekEntries (mem + localStorage `aaba.wk.<key>`, TTL 1h last 2 weeks / 6h older, cap 1000 -> {entries,truncated,at}), invalidateWeek, pendingEntries, studentEntries, stats(); closeCycle removed. adapter.firebase: Timestamp range on `at`, status==, studentId== (ONE field per query), entriesBetween, set raw numeric at -> Timestamp, batch(ops), docs counter. adapter.local/seed: same API, demo spread over 5 weeks incl. pending/void.

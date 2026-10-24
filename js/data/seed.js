@@ -1,5 +1,6 @@
 // Seed rules (SPEC §12), default titles/categories and demo data (SPEC §13).
-import { weekStart, WEEK } from '../weeks.js';
+import { weekStart, WEEK, isoDate } from '../weeks.js';
+import { subjectOf } from '../notes/subjects.js';
 const DAY = 864e5, HOUR = 36e5;
 
 export const CATEGORIES = [
@@ -104,10 +105,23 @@ export function buildDemo(now = Date.now()) {
   });
   const sum = [['g1', 372, 90, 215, 67], ['g2', 355, 85, 220, 50], ['g3', 340, 80, 210, 50], ['g4', 318, 70, 198, 50]]
     .map(([groupId, total, a, b, c]) => ({ groupId, total, byCat: { noiquy: a, hoctap: b, phongtrao: c } }));
+  // Notes demo: [id, dayOffset, subject, title, body, by-uid, byName, hoursAgo]; personal: [id, owner uid, dayOffset, subject, title, body, slot]
+  const notes = {}, pnotes = {};
+  [['n_demo01', 0, 'toan', 'Kiểm tra 15 phút Toán', 'Chương 2: hàm số bậc hai. Mang máy tính và thước kẻ.', 'u_teacher', 'Giáo viên', 20],
+    ['n_demo02', 1, 'van', 'Nộp bài viết số 2', 'Nộp bài nghị luận xã hội cho cô trước giờ ra chơi.', 'u_teacher', 'Giáo viên', 18],
+    ['n_demo03', 2, 'anh', 'Thi nói Tiếng Anh', 'Chuẩn bị chủ đề My hometown, mỗi bạn nói 2 phút.', 'u_admin', 'Ban cán sự', 12],
+    ['n_demo04', 0, 'sinh', 'Mang mẫu lá cây', 'Mỗi tổ mang 3 loại lá để quan sát dưới kính hiển vi.', 'u_admin', 'Ban cán sự', 10],
+    ['n_demo05', -1, 'khac', 'Họp lớp cuối tuần', 'Họp lớp lúc 7h30 sáng thứ Bảy, đi đúng giờ.', 'u_admin', 'Ban cán sự', 30],
+    ['n_demo06', 5, 'tin', 'Nộp bài thực hành Tin học', 'Nộp file bài tập Python qua email của thầy.', 'u_teacher', 'Giáo viên', 6]]
+    .forEach(([id, k, subject, title, body, by, byName, hrs]) => { const at = now - hrs * HOUR; notes[id] = { date: isoDate(now + k * DAY), subject, title, body, color: subjectOf(subject).hex, by, byName, at, upd: at }; });
+  [['n_demop1', 'u_recorder', 0, 'ly', 'Ôn công thức dao động', 'Học thuộc công thức con lắc lò xo.', 0],
+    ['n_demop2', 'u_student', 1, 'su', 'Đọc bài Cách mạng tháng Tám', '', 0],
+    ['n_demop3', 'u_teacher', 0, 'hoa', 'Chấm bài kiểm tra Hoá', 'Trả bài cho lớp vào tiết 3.', 1]]
+    .forEach(([id, owner, k, subject, title, body, slot]) => { const at = now - 2 * HOUR; pnotes[id] = { date: isoDate(now + k * DAY), subject, title, body, color: subjectOf(subject).hex, owner, slot, at, upd: at }; });
   return {
     v: 2,
     config: { className: '11A3', school: 'THPT Trần Quốc Toản', cycleWeeks: 4, openView: true, baseScore: 100, currentCycleId: 'c2', categories: CATEGORIES, titles: TITLES },
-    groups, students, rules, entries,
+    groups, students, rules, entries, notes, pnotes,
     cycles: {
       c1: { n: 1, start: start - 28 * DAY, end: start, closed: true, summary: sum },
       c2: { n: 2, start, end: null, closed: false, summary: [] },

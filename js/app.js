@@ -14,6 +14,7 @@ import { errMsg } from './ui/act.js';
 const NAV = [
   { path: '/', label: 'Xếp hạng', icon: 'rank' },
   { path: '/tongket', label: 'Tổng kết', icon: 'recap' },
+  { path: '/notes', label: 'Notes', icon: 'note' },
   { path: '/lichsu', label: 'Nhật ký', icon: 'history', wide: true },
   { path: '/ghi', label: 'Ghi điểm', icon: 'plus', cls: 'ghi', show: () => can('record') },
   { path: '/duyet', label: 'Xác nhận', icon: 'check', wide: true, badge: true, show: () => can('approve') },
@@ -26,7 +27,7 @@ let pending = 0, curPath = '/';
 function buildNav(list) {
   put(list, ...NAV.filter(n => !n.show || n.show()).map(n => {
     const badge = n.badge && h('span', { class: 'badge', 'data-badge': '', hidden: !pending }, pending);
-    return h('li', { class: n.wide ? 'only-wide' : '' },
+    return h('li', { class: (n.wide ? 'only-wide' : '') + (n.cls ? ` ${n.cls}-li` : '') },
       h('a', { class: `nav-item pressable ${n.cls || ''}`, href: '#' + n.path, 'data-path': n.path },
         h('span', { class: 'ico' }, icon(n.icon, 24), n.path === '/toi' && h('span', { class: 'ndot', 'data-ndot': '', hidden: !unseen() })), h('span', { class: 'lbl' }, n.label), badge));
   }));
