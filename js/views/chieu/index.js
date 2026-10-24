@@ -60,16 +60,19 @@ export default function chieu({ params: [key] }) {
   const onTap = e => { const t = e.target.closest?.('[data-tap]'), d = t && tapOf(t); if (d) { e.stopPropagation(); modal?.close(); modal = openModal(root, d, hide, () => { modal = null; }); } };
   box.addEventListener('click', onTap);
 
-  function load(fresh) {
+  const sid = s => s && s.type + (s.group?.id || '');
+  // keep = silent reload after a correction: no skeleton, stay on the same slide when it still exists
+  function load(keep) {
     if (!ready()) return;
-    const t = ++tok; cancelAll(); slides = []; fin = null; nav();
-    put(box, h('div', { class: 'ch-skel', 'aria-busy': 'true' }, h('i'), h('i'), h('i')));
-    store.weekEntries(start, { fresh: fresh || start === cur }).then(r => {
+    const t = ++tok, was = keep ? sid(slides[i]) : null;
+    if (!keep) { cancelAll(); slides = []; fin = null; nav(); put(box, h('div', { class: 'ch-skel', 'aria-busy': 'true' }, h('i'), h('i'), h('i'))); }
+    store.weekEntries(start, { fresh: true }).then(r => {
       if (t !== tok || gone) return;
       slides = buildSlides({ entries: r.entries, groups: M.groups, students: M.students, config: M.config, weekLabel: W.label(start), isCurrent: start === cur, daysLeft: W.daysLeft(Date.now()) });
-      i = 0; paint(0);
-    }).catch(() => t === tok && !gone && put(box, h('div', { class: 'ch-msg' }, h('h2', null, 'Không tải được'), h('p', null, 'Kiểm tra mạng rồi thử lại.'),
-      h('div', { class: 'ch-msgbtns' }, h('button', { class: 'ch-btn', type: 'button', onclick: () => load(true) }, 'Thử lại'), h('button', { class: 'ch-btn ch-btn2', type: 'button', onclick: exit }, 'Thoát')))));
+      const j = was ? slides.findIndex(x => sid(x) === was) : -1;
+      i = j >= 0 ? j : 0; paint(j >= 0 ? -1 : 0);
+    }).catch(() => t === tok && !gone && !keep && put(box, h('div', { class: 'ch-msg' }, h('h2', null, 'Không tải được'), h('p', null, 'Kiểm tra mạng rồi thử lại.'),
+      h('div', { class: 'ch-msgbtns' }, h('button', { class: 'ch-btn', type: 'button', onclick: () => load(false) }, 'Thử lại'), h('button', { class: 'ch-btn ch-btn2', type: 'button', onclick: exit }, 'Thoát')))));
   }
 
   let tt = 0;
@@ -78,10 +81,12 @@ export default function chieu({ params: [key] }) {
   const unbind = bindInput({ root, next: advance, prev: back, fs: () => toggleFs(root), hide: toggleHide, exit });
   document.body.append(root); document.body.classList.add('chieu-on');
   const subs = ['config', 'groups', 'students'].map(c => store.on(c, v => { M[c] = v; if (ready() && !started) { started = true; load(false); } }));
+  let dt = 0; const onInv = e => { if (e.detail !== key) return; clearTimeout(dt); dt = setTimeout(() => !gone && started && load(true), 300); };
+  addEventListener('aaba:inv', onInv);
   put(box, h('div', { class: 'ch-skel', 'aria-busy': 'true' }, h('i'), h('i'), h('i')));
   nav();
   return { el: h('div'), destroy() {
-    gone = true; cancelAll(); modal?.close(); box.removeEventListener('click', onTap); unbind(); unfit(); clearTimeout(tt); subs.forEach(u => u()); root.remove();
+    gone = true; cancelAll(); modal?.close(); box.removeEventListener('click', onTap); unbind(); unfit(); clearTimeout(tt); clearTimeout(dt); removeEventListener('aaba:inv', onInv); subs.forEach(u => u()); root.remove();
     if (!document.querySelector('.ch')) document.body.classList.remove('chieu-on');
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignore */ }
   } };

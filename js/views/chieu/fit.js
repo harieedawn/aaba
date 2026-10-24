@@ -9,6 +9,18 @@ const wide = c => c.scrollWidth > c.clientWidth + 1;
 const over = el => [el, ...el.querySelectorAll('.ch-main,.ch-cols,.ch-col,.pd-area,.pd-hero,.bd-rows')].some(c => c.scrollHeight > c.clientHeight + 1)
   || [...el.querySelectorAll('.ch-main,.ch-cols,.ch-col,.bd-rows,.ch-ol li,.tp-gs,.tp-head,.ch-lines li,.ch-star,.bd-row,.ch-side')].some(wide) || high(el);
 
+// Hay bị trừ / Bạn nổi bật still too tall at 0.6: drop the last row of the longest list (keep >= 2 per list), re-fit; last resort = scroll.
+function trimTop(el) {
+  const ols = [...el.querySelectorAll('.ch-ol')];
+  for (;;) {
+    const o = ols.filter(x => x.querySelectorAll('li:not(.ch-trim)').length > 2).sort((a, b) => b.querySelectorAll('li:not(.ch-trim)').length - a.querySelectorAll('li:not(.ch-trim)').length)[0];
+    if (!o) break;
+    [...o.querySelectorAll('li:not(.ch-trim)')].pop().classList.add('ch-trim');
+    if (run(el)) return;
+  }
+  el.classList.add('ch-scroll');
+}
+
 function run(el) {
   for (let f = 1; f >= MIN - 1e-6; f = Math.round((f - STEP) * 100) / 100) { el.style.setProperty('--fit', f); if (!over(el)) return true; }
   return false;
@@ -19,7 +31,9 @@ export function fit(el) {
   const ul = el.querySelector('.ch-lines'), more = el.querySelector('.ch-more'), lis = ul ? [...ul.children] : [], base = more ? +more.dataset.n || 0 : 0;
   const setMore = c => { if (!more) return; more.textContent = `+ ${base + c} mục khác`; more.hidden = base + c <= 0; };
   lis.forEach(li => li.classList.remove('ch-trim')); ul?.classList.remove('two'); setMore(0);
-  if (run(el) || !ul) return;
+  el.querySelectorAll('.ch-ol .ch-trim').forEach(li => li.classList.remove('ch-trim')); el.classList.remove('ch-scroll');
+  if (run(el)) return;
+  if (!ul) return trimTop(el);
   if (land()) { ul.classList.add('two'); if (run(el)) return; }
   let cut = 0;
   while (over(el) && lis.length - cut > 1) { lis[lis.length - 1 - cut].classList.add('ch-trim'); setMore(++cut); }

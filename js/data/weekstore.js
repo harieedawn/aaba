@@ -15,13 +15,15 @@ function outEmit() { saveOut(); [...outCbs].forEach(f => f()); if (wk.last && wk
 export const entryState = id => OUT.get(id)?.state || (DONE.has(id) ? 'ok' : null);
 export const entryError = id => OUT.get(id)?.err || null;
 export const onOutbox = cb => { outCbs.add(cb); return () => outCbs.delete(cb); };
+// An entry that settled later (offline outbox / reconcile) may belong to a past week whose cache was read meanwhile: drop it.
+const lateInv = it => { const at = it.entry?.at; if (at != null && at < weekStart(Date.now())) invalidateWeek(weekKey(weekStart(at))); };
 const settle = it => { OUT.delete(it.id); DONE.add(it.id); outEmit(); };
 const fail = (it, e) => { it.state = 'error'; it.err = { code: e?.code || '', message: e?.message || '' }; outEmit(); };
 async function send(it) {
   it.state = 'sending'; it.err = null; outEmit();
   try {
     const r = await A.batch(it.ops, { track: true });
-    if (r && r.done && !r.confirmed) { it.state = 'queued'; outEmit(); r.done.then(() => settle(it), e => fail(it, e)); } else settle(it);
+    if (r && r.done && !r.confirmed) { it.state = 'queued'; outEmit(); r.done.then(() => { settle(it); lateInv(it); }, e => fail(it, e)); } else settle(it);
   } catch (e) { fail(it, e); }
   return it;
 }
@@ -38,7 +40,7 @@ export async function retryEntry(id) {
   const it = OUT.get(id); if (!it || it.state === 'sending') return;
   it.state = 'sending'; outEmit();
   const p = await A.probe?.('entries', id);
-  if (p === 'server') return settle(it);
+  if (p === 'server') { settle(it); return lateInv(it); }
   if (p === 'pending') { it.state = 'queued'; outEmit(); return; }
   return send(it);
 }
@@ -51,7 +53,7 @@ export async function reconcile() {
     for (const it of [...OUT.values()]) {
       if (it.state !== 'queued' && it.state !== 'error') continue;
       const p = await A.probe('entries', it.id);
-      if (p === 'server') settle(it);
+      if (p === 'server') { settle(it); lateInv(it); }
       else if (p === 'missing' && it.state === 'queued') fail(it, { message: 'Máy chủ không nhận bản ghi này' });
     }
   } finally { recBusy = false; }
@@ -118,9 +120,9 @@ export function onWeek(cb) {
   };
 }
 
-// One-time week fetch. Cache: memory + localStorage aaba.wk.<key>; TTL 5 min for the last 2 weeks, 6h older; {fresh} bypasses. Cap 1000 docs.
+// One-time week fetch. Cache: memory + localStorage aaba.wk.<key>; TTL 5 min for every week; {fresh} bypasses. Cap 1000 docs.
 const WK_CAP = 1000, memWk = new Map(), inflight = new Map();
-const ttl = start => (start >= weekStart(Date.now()) - WEEK ? 3e5 : 6 * 36e5); // last 2 weeks: 5 min (others add entries), older: 6h
+const ttl = () => 3e5; // 5 min for every week (corrections to past weeks must show up soon)
 const lsRead = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 export async function weekEntries(start, { fresh = false } = {}) {
   const key = weekKey(start), lk = 'aaba.wk.' + key, now = Date.now();

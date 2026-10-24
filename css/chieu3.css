@@ -32,7 +32,6 @@
 .ch-col .ch-ol{margin:0;gap:calc(var(--s)*2.2)}
 .ch-ol li{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:calc(var(--s)*1.6);row-gap:calc(var(--s)*.5);align-items:baseline;min-width:0}
 .ch-ol .ch-rn{grid-area:1/1;font-size:calc(var(--s)*3.4);line-height:1.15}
-.ch-ol .ch-amt,.ch-ol .ch-cnt{grid-area:1/2;margin:0;font-size:calc(var(--s)*3.4);white-space:nowrap}
 .ch-ol .ch-gchip{grid-area:2/1;justify-self:start}
 .ch-ol li.g-blue,.ch-ol li[class*=" g-"],.ch-ol li[class^="g-"]{border-left:calc(var(--s)*.7) solid var(--gc);padding-left:calc(var(--s)*1.4)}
 /* portrait: colour band shrinks with --fit */
@@ -69,7 +68,6 @@
 .ch-col h3{flex:none}.ch-col .ch-ol{flex:none;align-self:stretch}
 .ch-ol li{grid-template-columns:minmax(0,1fr) auto;align-items:start;flex:none}
 .ch-ol .ch-rn{grid-area:1/1;min-width:0;overflow-wrap:anywhere}
-.ch-ol .ch-amt,.ch-ol .ch-cnt{grid-area:1/2;justify-self:end;white-space:nowrap}
 .ch-ol .ch-gchip{grid-area:2/1;justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .ch-lines li{grid-template-columns:minmax(0,1fr) minmax(calc(var(--lf)*2.4),auto)}
 .ch-lines .ch-rn,.ch-lines .ch-nl{overflow-wrap:anywhere}.ch-lines .ch-amt{white-space:nowrap}

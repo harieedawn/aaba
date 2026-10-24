@@ -42,7 +42,15 @@
   .badge{position:static;margin-left:auto}
   .hdr .logo{display:none}
   .hdr-title.sr{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}
-  .home-grid{grid-template-columns:minmax(0,1fr) 360px;align-items:start;gap:var(--sp-6)}
   .home-grid>section{max-width:none}
+  /* Xếp hạng: tổ cards in a 2-column grid (rank order 1 2 / 3 4), equal height per row, odd last card spans the row */
+  .home .lb{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+  .lb>:last-child:nth-child(odd){grid-column:1/-1}
+  .lb .lb-name,.lb .hero-name{white-space:normal;overflow-wrap:anywhere}
+  .home .lb>.lb-hero{display:flex;flex-direction:column;justify-content:center}
+}
+/* 1024-1279: board keeps the full width (2 usable columns); the side stack goes below it */
+@media (min-width:1280px){
+  .home-grid{grid-template-columns:minmax(0,1fr) 360px;align-items:start;gap:var(--sp-6)}
   .side{position:sticky;top:var(--sp-6)}
 }

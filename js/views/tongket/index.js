@@ -44,7 +44,7 @@ export default function tongket({ params: [pm, pk] }) {
     head();
     if (mode !== 'tuan') { const v = multiView({ mode, key, M, fresh }); sub = v.stop; put(body, v.el); return; }
     const s = W.keyToStart(key); put(body, ...skeletonCards(3));
-    store.weekEntries(s, { fresh: fresh || s === cur }).then(r => {
+    store.weekEntries(s, { fresh: true }).then(r => {
       if (t !== tok || gone) return;
       const isCurrent = s === cur;
       put(body, ...renderWeek({ entries: r.entries, truncated: r.truncated, M, isCurrent, readOnly: !isCurrent && !can('backdate'), extra: adminExtras({ start: s, isCurrent, entries: r.entries, reload: () => load(true) }) }));
@@ -55,7 +55,7 @@ export default function tongket({ params: [pm, pk] }) {
   }
   const subs = ['config', 'groups', 'students'].map(c => store.on(c, v => { M[c] = v; if (ready() && !sub && !body.dataset.ok) { body.dataset.ok = '1'; load(false); } }));
   if (can('approve')) subs.push(store.pendingEntries(es => { S.pend = es.length; paintBanner(); }));
-  const onInv = () => ready() && load(true);
+  const onInv = () => ready() && load(mode === 'tuan'); // multi views: cache served, only the invalidated week refetches
   addEventListener('aaba:inv', onInv);
   head();
   return { el, destroy: () => { gone = true; sub?.(); subs.forEach(u => u()); removeEventListener('aaba:inv', onInv); } };
