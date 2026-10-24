@@ -27,6 +27,7 @@ const P = {
   present: 'M3 4h18v12H3zM8 20h8M12 16v4',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
+  today: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M11 13.5l-2 2 2 2M9 15.5h4.5a1.5 1.5 0 0 0 0-3H13',
 };
 export function icon(name, size = 22, cls = '') {
   const t = document.createElement('template');

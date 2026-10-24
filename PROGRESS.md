@@ -165,3 +165,8 @@ Selftest `js/scoring.selftest.mjs` also compares the old function with the new o
 - home.js: always "Chào {tên gọi}" (or "Chào bạn").
 - admin/index.js: teacher (manage && !edit) gets muted banner + root class `is-readonly` (css/admin.css: pointer-events:none, opacity .6 on buttons/inputs). Decision: no prior readOnly pattern in admin sections, so CSS-level block. firestore.rules untouched.
 - Checks: node --check clean, selftests pass, ban-list clean, rules byte-identical. Not browser-tested.
+
+## Notes stage 2 DONE
+- New: js/notes/calendar.js (Monday-first mini calendar, compact strip / month grid / overlay on >=900px), js/notes/agenda.js (Tiếp theo + range chips + grouped list). Edited: index.js (banner pill, day arrows, reset, optimistic moves), board.js (drag & drop, keyboard), css/notes.css, icons.js (`today`), NOTES-SPEC.md.
+- Drag: only personal notes; mouse 4px, touch 250ms long-press, keyboard Enter/Space + arrows; free = move, personal = swap, class = snap back with shake; one saveMine per moved note. 'Sắp lại' + 'Hoàn tác' toast.
+- Checks: node --check on all notes files, notes.selftest.mjs OK, headless Chromium run of the local demo (no console errors, no horizontal scroll at 320/375/768/1280/667x375, light+dark, guest view-only). Firebase/rules unchanged.
